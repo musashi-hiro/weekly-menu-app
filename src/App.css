@@ -1,0 +1,2184 @@
+/* ==========================================================================
+   App Styles - こんだてウィークリー (Mobile-Specialized Edition)
+   ========================================================================== */
+
+.app-wrapper {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  background-color: var(--bg-app);
+}
+
+.app-container {
+  width: 100%;
+  max-width: 500px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background-color: var(--bg-app);
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.08);
+}
+
+/* --------------------------------------------------------------------------
+   Header
+   -------------------------------------------------------------------------- */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background-color: var(--bg-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-color);
+  padding: 12px 16px 10px;
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-badge {
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+.app-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.app-subtitle {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sub-action-btn-compact {
+  height: 32px;
+  padding: 0 9px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all var(--transition-fast);
+}
+
+.sub-action-btn-compact:active {
+  transform: scale(0.95);
+}
+
+.header-plan-banner {
+  margin-top: 10px;
+}
+
+.primary-action-btn {
+  width: 100%;
+  height: 42px;
+  border-radius: var(--radius-md);
+  background: var(--primary-gradient);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: var(--shadow-primary);
+  transition: transform var(--transition-fast), filter var(--transition-fast);
+}
+
+.primary-action-btn:active {
+  transform: scale(0.98);
+}
+
+.sparkle-icon {
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+
+/* --------------------------------------------------------------------------
+   Main Content Area
+   -------------------------------------------------------------------------- */
+.app-main {
+  flex: 1;
+  padding: 14px 14px 90px;
+  overflow-y: auto;
+}
+
+/* --------------------------------------------------------------------------
+   Mobile Dock (4 Tabs: 献立、メニュー、データ、設定)
+   -------------------------------------------------------------------------- */
+.mobile-dock-wrapper {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.mobile-dock-container {
+  width: 100%;
+  max-width: 500px;
+  background-color: var(--bg-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-around;
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+  pointer-events: auto;
+  box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.06);
+}
+
+.dock-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 0;
+  color: var(--text-muted);
+  border-radius: var(--radius-md);
+  transition: color var(--transition-fast);
+}
+
+.dock-icon-box {
+  width: 36px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+}
+
+.dock-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.dock-item.active {
+  color: var(--primary);
+}
+
+.dock-item.active .dock-icon-box {
+  background-color: var(--primary-light);
+  transform: translateY(-2px);
+}
+
+.dock-item.active .dock-icon {
+  stroke-width: 2.3px;
+}
+
+/* --------------------------------------------------------------------------
+   Week Plan View
+   -------------------------------------------------------------------------- */
+.plan-sub-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.btn-shopping-shortcut {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+}
+
+.btn-shopping-shortcut:active {
+  transform: scale(0.96);
+}
+
+.shortcut-badge {
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+}
+
+.day-selector-pills {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin-bottom: 12px;
+}
+
+.day-pill {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-full);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.day-pill.selected {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+  transform: scale(1.08);
+}
+
+.mode-switch-group {
+  display: flex;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 2px;
+}
+
+.mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 8px;
+  color: var(--text-muted);
+  transition: all var(--transition-fast);
+}
+
+.mode-btn.active {
+  background: var(--bg-app);
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+}
+
+.all-days-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 曜日カード */
+.day-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  padding: 13px;
+  box-shadow: var(--shadow-sm);
+}
+
+.day-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.day-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.day-badge {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.day-bg-mon { background-color: var(--color-mon); }
+.day-bg-tue { background-color: var(--color-tue); }
+.day-bg-wed { background-color: var(--color-wed); }
+.day-bg-thu { background-color: var(--color-thu); }
+.day-bg-fri { background-color: var(--color-fri); }
+.day-bg-sat { background-color: var(--color-sat); }
+.day-bg-sun { background-color: var(--color-sun); }
+
+.day-theme {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.shuffle-day-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-card-subtle);
+  padding: 4px 8px;
+  border-radius: var(--radius-full);
+  transition: all var(--transition-fast);
+}
+
+.shuffle-day-btn:active {
+  transform: rotate(25deg);
+}
+
+/* 4品スロット */
+.dishes-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dish-slot-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: var(--bg-card-subtle);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.dish-slot-item:hover {
+  border-color: var(--border-focus);
+}
+
+.main-slot {
+  background: var(--primary-light);
+  border-color: rgba(255, 107, 53, 0.2);
+}
+
+.dessert-slot {
+  background: rgba(236, 72, 153, 0.08);
+  border-color: rgba(236, 72, 153, 0.15);
+}
+
+.dessert-slot .slot-type {
+  color: #ec4899;
+}
+
+.dessert-slot .slot-icon {
+  color: #ec4899;
+}
+
+.slot-icon-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 62px;
+  flex-shrink: 0;
+}
+
+.slot-type {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.main-slot .slot-type {
+  color: var(--primary-dark);
+}
+
+.slot-icon {
+  color: var(--text-muted);
+}
+
+.main-slot .slot-icon {
+  color: var(--primary);
+}
+
+.slot-dish-name {
+  flex: 1;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-main);
+  padding: 0 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.placeholder-text {
+  color: var(--text-light);
+  font-style: italic;
+  font-weight: normal;
+  font-size: 0.8rem;
+}
+
+.slot-edit-icon {
+  color: var(--text-light);
+  flex-shrink: 0;
+}
+
+.day-ingredients-row {
+  margin-top: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.ing-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+.ing-tags-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.ing-tag {
+  font-size: 0.68rem;
+  background: var(--bg-card-subtle);
+  color: var(--text-muted);
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-weight: 500;
+}
+
+.ing-tag.more {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.day-memo-section {
+  margin-top: 8px;
+  border-top: 1px dashed var(--border-color);
+  padding-top: 6px;
+}
+
+.memo-display {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.memo-text {
+  font-style: italic;
+}
+
+.memo-edit-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.memo-textarea {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  padding: 6px 8px;
+  font-size: 0.8rem;
+}
+
+.memo-done-btn {
+  align-self: flex-end;
+  background: var(--primary);
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   Menu View (料理メニュー登録・管理)
+   -------------------------------------------------------------------------- */
+.menu-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.view-title-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.view-main-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.view-sub-desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.btn-primary-action {
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+.dock-category-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-top: 10px;
+  margin-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.dock-cat-tab {
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-card-subtle);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all var(--transition-fast);
+}
+
+.dock-cat-tab.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.count-pill {
+  font-size: 0.65rem;
+  background: rgba(0, 0, 0, 0.08);
+  padding: 1px 5px;
+  border-radius: var(--radius-full);
+}
+
+.recipes-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recipe-manage-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.recipe-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.recipe-badges {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cat-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.custom-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: var(--accent-light);
+  color: var(--accent);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.recipe-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-apply-to-day {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-delete-recipe {
+  color: var(--text-light);
+  padding: 4px;
+}
+
+.btn-delete-recipe:hover {
+  color: #ef4444;
+}
+
+.recipe-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+
+.recipe-card-tip {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.recipe-meta-bottom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.recipe-cook-time {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.recipe-ing-tags {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.mini-ing-tag {
+  font-size: 0.68rem;
+  background: var(--bg-card-subtle);
+  color: var(--text-muted);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.mini-ing-more {
+  font-size: 0.65rem;
+  color: var(--text-light);
+}
+
+/* 曜日選択グリッド */
+.day-select-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 14px;
+}
+
+.btn-day-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 4px;
+  transition: all var(--transition-fast);
+}
+
+.btn-day-slot:active {
+  transform: scale(0.95);
+  background: var(--primary-light);
+}
+
+.day-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.day-name-text {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+/* 料理新規作成フォーム */
+.add-recipe-form {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.req {
+  color: #ef4444;
+}
+
+.category-radio-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.radio-pill {
+  padding: 7px 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card-subtle);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+  transition: all var(--transition-fast);
+}
+
+.radio-pill.selected {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.select-input {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 8px;
+  font-size: 0.8rem;
+  color: var(--text-main);
+}
+
+.field-hint {
+  font-size: 0.68rem;
+  color: var(--text-light);
+}
+
+.form-bottom-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-cancel {
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card-subtle);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.btn-submit {
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* --------------------------------------------------------------------------
+   Stats View (データ分析)
+   -------------------------------------------------------------------------- */
+.stats-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stats-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.kpi-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  box-shadow: var(--shadow-sm);
+}
+
+.kpi-icon-wrap {
+  font-size: 20px;
+}
+
+.kpi-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.kpi-value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.kpi-value-sm {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.2;
+  word-break: break-all;
+}
+
+.stats-section-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.section-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.header-icon {
+  color: var(--primary);
+}
+
+.section-card-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.stacked-bar-wrapper {
+  margin-bottom: 12px;
+}
+
+.stacked-bar {
+  display: flex;
+  height: 14px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background: var(--bg-card-subtle);
+}
+
+.bar-segment {
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+.bar-main { background-color: #ff6b35; }
+.bar-sub { background-color: #10b981; }
+.bar-soup { background-color: #3b82f6; }
+.bar-dessert { background-color: #ec4899; }
+
+.category-legend-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+}
+
+.dot-main { background-color: #ff6b35; }
+.dot-sub { background-color: #10b981; }
+.dot-soup { background-color: #3b82f6; }
+.dot-dessert { background-color: #ec4899; }
+
+.legend-label {
+  color: var(--text-muted);
+}
+
+.legend-count {
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+/* タンパク質バランス */
+.nutrition-progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nutrition-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nutri-label-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.nutri-emoji {
+  font-size: 14px;
+}
+
+.nutri-name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.nutri-bar-bg {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-card-subtle);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.nutri-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+}
+
+.bar-fill-meat { background-color: #ef4444; }
+.bar-fill-fish { background-color: #06b6d4; }
+.bar-fill-veg { background-color: #10b981; }
+
+.nutri-percent {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  width: 32px;
+  text-align: right;
+}
+
+/* ランキング */
+.ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ranking-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ranking-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--bg-card-subtle);
+  color: var(--text-muted);
+}
+
+.rank-1 { background-color: #f59e0b; color: #fff; }
+.rank-2 { background-color: #94a3b8; color: #fff; }
+.rank-3 { background-color: #d97706; color: #fff; }
+
+.ranking-bar-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ranking-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dish-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.dish-count-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.ranking-bar-track {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-card-subtle);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.ranking-bar-fill {
+  height: 100%;
+  background: var(--primary-gradient);
+  border-radius: var(--radius-full);
+}
+
+/* 曜日別テーブル */
+.day-stats-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.day-stat-row {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  background: var(--bg-card-subtle);
+  border-radius: var(--radius-md);
+  gap: 8px;
+}
+
+.day-stat-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.day-stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  width: 44px;
+}
+
+.day-stat-main {
+  flex: 1;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.day-stat-count-pill {
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: var(--bg-card);
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Settings View (設定)
+   -------------------------------------------------------------------------- */
+.settings-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-sections-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.setting-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.setting-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.setting-icon {
+  color: var(--primary);
+}
+
+.setting-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.setting-desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+/* テーマ選択 */
+.theme-toggle-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.theme-option-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card-subtle);
+  transition: all var(--transition-fast);
+  text-align: left;
+}
+
+.theme-option-btn.selected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.theme-icon {
+  flex-shrink: 0;
+}
+
+.theme-icon.light { color: #f59e0b; }
+.theme-icon.dark { color: #8b5cf6; }
+
+.theme-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.theme-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.theme-desc {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+.check-icon {
+  color: var(--primary);
+}
+
+/* 文字サイズ */
+.font-size-selector-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.font-size-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 6px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card-subtle);
+  transition: all var(--transition-fast);
+}
+
+.font-size-btn.selected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.font-preview {
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.font-preview.sm { font-size: 1rem; }
+.font-preview.md { font-size: 1.25rem; }
+.font-preview.lg { font-size: 1.55rem; }
+
+.font-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* トグルスイッチ */
+.setting-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toggle-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.switch-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.switch-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider-round {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: var(--border-color);
+  transition: 0.3s;
+  border-radius: 34px;
+}
+
+.slider-round:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+input:checked + .slider-round {
+  background-color: var(--primary);
+}
+
+input:checked + .slider-round:before {
+  transform: translateX(20px);
+}
+
+.notify-time-section {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.time-select-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.time-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.time-input {
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.btn-test-notify {
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 5px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-main);
+}
+
+.notify-status-text {
+  width: 100%;
+  font-size: 0.72rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* アクションリスト */
+.setting-action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setting-row-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  text-align: left;
+  transition: all var(--transition-fast);
+}
+
+.setting-row-btn:active {
+  background: var(--border-color);
+}
+
+.setting-row-btn.danger {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.setting-row-btn.danger .btn-icon {
+  color: #ef4444;
+}
+
+.btn-icon {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.btn-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.btn-main-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.btn-sub-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.app-version-footer {
+  text-align: center;
+  padding: 16px 0;
+  color: var(--text-light);
+  font-size: 0.7rem;
+}
+
+.footer-sub {
+  font-size: 0.65rem;
+  margin-top: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Shopping List Modal
+   -------------------------------------------------------------------------- */
+.shopping-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shopping-modal-icon {
+  color: var(--primary);
+}
+
+.modal-quick-actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--bg-card-subtle);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.btn-secondary-xs {
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-danger-xs {
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  font-size: 0.7rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.add-item-form-modal {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-shopping-items-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* --------------------------------------------------------------------------
+   Modals & Common
+   -------------------------------------------------------------------------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+@media (min-width: 600px) {
+  .modal-backdrop {
+    align-items: center;
+  }
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+@media (min-width: 600px) {
+  .modal-content {
+    border-radius: var(--radius-lg);
+    max-height: 80vh;
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.modal-subtitle {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.custom-input-card {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-card-subtle);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.text-input {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 7px 10px;
+  font-size: 0.8rem;
+}
+
+.text-input:focus {
+  border-color: var(--border-focus);
+}
+
+.search-bar-wrap {
+  position: relative;
+  margin: 10px 0 0;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+
+.search-input {
+  width: 100%;
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 7px 32px;
+  font-size: 0.8rem;
+}
+
+.icon-btn-xs {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 8px 16px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.filter-tab {
+  padding: 5px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-card-subtle);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.filter-tab.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.recipe-list-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recipe-card-select {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.recipe-card-select:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.recipe-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.recipe-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.selected-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.recipe-tip {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.recipe-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.recipe-time {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.recipe-ingredients-preview {
+  font-size: 0.68rem;
+  color: var(--text-light);
+}
+
+/* Toast */
+.toast-notification {
+  position: fixed;
+  bottom: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  background-color: rgba(15, 23, 42, 0.9);
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  max-width: 90%;
+  text-align: center;
+}
+
+.empty-box {
+  text-align: center;
+  padding: 30px 16px;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.empty-icon {
+  color: var(--text-light);
+}
+
+/* --------------------------------------------------------------------------
+   Favorites View (お気に入りテンプレート)
+   -------------------------------------------------------------------------- */
+.favorites-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.favorites-header-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.fav-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.fav-subtitle {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.btn-primary-sm {
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius-md);
+  padding: 7px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.btn-primary-sm:active {
+  transform: scale(0.96);
+}
+
+.btn-primary-sm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary-sm {
+  background: var(--bg-card-subtle);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 7px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.create-template-form {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-subheading {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.form-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.templates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.template-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.template-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.template-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.template-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.preset-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.user-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  padding: 2px 7px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.template-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.template-desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.template-action-btns {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.apply-template-btn {
+  background: var(--primary);
+  color: #fff;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all var(--transition-fast);
+}
+
+.apply-template-btn:active {
+  transform: scale(0.95);
+}
+
+.delete-tpl-btn {
+  color: var(--text-light);
+  padding: 5px;
+  border-radius: 6px;
+  transition: all var(--transition-fast);
+}
+
+.delete-tpl-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* テンプレート週間プレビュー */
+.template-week-preview {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 2px 0;
+}
+
+.preview-day-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex: 1;
+  min-width: 50px;
+}
+
+.preview-day-label {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.preview-main-dish {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-main);
+  text-align: center;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60px;
+}
+
+/* テンプレート展開ボタン */
+.template-expand-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card-subtle);
+  border: 1px solid var(--border-color);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: all var(--transition-fast);
+}
+
+.template-expand-btn:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+/* テンプレート詳細表示 */
+.template-detail-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-color);
+}
+
+.template-detail-day {
+  background: var(--bg-card-subtle);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+}
+
+.detail-day-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+
+.day-badge-sm {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #fff;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+}
+
+.detail-day-theme {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.detail-dishes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detail-dish-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.detail-dish-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  width: 60px;
+  flex-shrink: 0;
+}
+
+.detail-dish-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+/* 適用確認モーダル */
+.apply-confirm-modal {
+  max-height: 40vh;
+}
+
+.apply-confirm-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.apply-confirm-text {
+  font-size: 0.85rem;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+.apply-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* --------------------------------------------------------------------------
+   Menu Edit Button
+   -------------------------------------------------------------------------- */
+.btn-edit-recipe {
+  color: var(--text-light);
+  padding: 4px;
+  border-radius: 4px;
+  transition: all var(--transition-fast);
+}
+
+.btn-edit-recipe:hover {
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+.modal-title-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sparkle-highlight {
+  color: var(--primary);
+}
+

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">こんだてウィークリー</string>
+    <string name="title_activity_main">こんだてウィークリー</string>
+    <string name="package_name">com.kondate.weeklymenu</string>
+    <string name="custom_url_scheme">com.kondate.weeklymenu</string>
+</resources>
