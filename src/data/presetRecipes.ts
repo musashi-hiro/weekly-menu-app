@@ -1,4 +1,5 @@
-import type { RecipeItem, IngredientCategory, SavedTemplate, DayId, DayMenu } from '../types';
+import type { RecipeItem, IngredientCategory, SavedTemplate, DayId, DayMenu, DishCategory, IngredientItem } from '../types';
+
 
 export const CATEGORY_NAMES: Record<IngredientCategory, { label: string; icon: string }> = {
   meat_fish: { label: 'お肉・お魚', icon: '🥩' },
@@ -9,11 +10,26 @@ export const CATEGORY_NAMES: Record<IngredientCategory, { label: string; icon: s
   other: { label: '加工品・その他', icon: '🛒' },
 };
 
-export const DISH_TYPE_INFO = {
+export const DISH_TYPE_INFO: Record<DishCategory, { label: string; icon: string; color: string }> = {
   main: { label: '主菜', icon: '🥩', color: '#ff6b35' },
   sub: { label: '副菜', icon: '🥗', color: '#10b981' },
   soup: { label: '汁物', icon: '🍲', color: '#3b82f6' },
   dessert: { label: 'デザート', icon: '🍮', color: '#ec4899' },
+  other: { label: '追加の一品', icon: '🍽️', color: '#8b5cf6' },
+};
+
+// 食材の分量を指定人数に合わせてフォーマットする関数
+export const formatIngredientWithAmount = (
+  ing: IngredientItem,
+  targetServings: number = 2
+): string => {
+  if (ing.amount === undefined || !ing.unit) {
+    return ing.name;
+  }
+  const baseServings = ing.servings || 2;
+  const scaled = (ing.amount * targetServings) / baseServings;
+  const rounded = Math.round(scaled * 10) / 10;
+  return `${ing.name} ${rounded}${ing.unit}`;
 };
 
 // 食材名からカテゴリを推測するヘルパー

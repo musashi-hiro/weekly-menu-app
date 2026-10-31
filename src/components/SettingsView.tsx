@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Smartphone,
   Check,
+  Users,
 } from 'lucide-react';
 import type { AppSettings } from '../types';
 import { exportAllData, importAllData } from '../utils/storage';
@@ -196,7 +197,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
 
-        {/* 3. 通知設定 */}
+        {/* 3. 基本の人数設定 */}
+        <div className="setting-card">
+          <div className="setting-card-header">
+            <Users size={18} className="setting-icon" />
+            <h3 className="setting-title">基本の人数設定</h3>
+          </div>
+          <p className="setting-desc">
+            献立作成や買い物リストの分量計算で使われる標準の人数です
+          </p>
+
+          <div className="servings-setting-row">
+            {[1, 2, 3, 4, 5, 6].map((num) => (
+              <button
+                key={num}
+                type="button"
+                className={`servings-choice-btn ${(settings.defaultServings || 2) === num ? 'selected' : ''}`}
+                onClick={() => onUpdateSettings({ ...settings, defaultServings: num })}
+              >
+                <span>{num}人分</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 4. 通知設定 */}
         <div className="setting-card">
           <div className="setting-card-header">
             <Bell size={18} className="setting-icon" />

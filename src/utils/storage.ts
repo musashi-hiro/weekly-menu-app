@@ -6,8 +6,16 @@ import type {
   RecipeItem,
   AppSettings,
   IngredientCategory,
+  CalendarRecord,
+  DishEntry,
+  IngredientItem,
 } from '../types';
-import { DEFAULT_WEEK_DAYS, PRESET_RECIPES, PRESET_TEMPLATES, guessCategory } from '../data/presetRecipes';
+import {
+  DEFAULT_WEEK_DAYS,
+  PRESET_RECIPES,
+  PRESET_TEMPLATES,
+  guessCategory,
+} from '../data/presetRecipes';
 
 const STORAGE_KEYS = {
   WEEK_PLAN: 'kondate_weekly_plan_v2',
@@ -16,6 +24,7 @@ const STORAGE_KEYS = {
   CUSTOM_RECIPES: 'kondate_custom_recipes_v2',
   SETTINGS: 'kondate_app_settings_v2',
   HISTORY: 'kondate_plan_history_v2',
+  CALENDAR: 'kondate_calendar_records_v1',
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -24,6 +33,65 @@ export const DEFAULT_SETTINGS: AppSettings = {
   notifyEnabled: false,
   notifyTime: '17:30',
   weekStart: 'mon',
+  defaultServings: 2,
+};
+
+// 献立の各曜日にdishes配列を補完・同期するヘルパー
+export const ensureDayDishes = (day: DayMenu): DayMenu => {
+  const servings = day.servings || 2;
+  let dishes = day.dishes ? [...day.dishes] : [];
+
+  // もしdishesが空なら、従来の4枠から構築
+  if (dishes.length === 0) {
+    if (day.mainDish) {
+      dishes.push({
+        id: 'dish_' + Math.random().toString(36).substring(2, 9),
+        name: day.mainDish,
+        type: 'main',
+        servings,
+      });
+    }
+    if (day.subDish) {
+      dishes.push({
+        id: 'dish_' + Math.random().toString(36).substring(2, 9),
+        name: day.subDish,
+        type: 'sub',
+        servings,
+      });
+    }
+    if (day.soupDish) {
+      dishes.push({
+        id: 'dish_' + Math.random().toString(36).substring(2, 9),
+        name: day.soupDish,
+        type: 'soup',
+        servings,
+      });
+    }
+    if (day.dessertDish) {
+      dishes.push({
+        id: 'dish_' + Math.random().toString(36).substring(2, 9),
+        name: day.dessertDish,
+        type: 'dessert',
+        servings,
+      });
+    }
+  }
+
+  // 従来のフィールドも互換性のために同期
+  const main = dishes.find((d) => d.type === 'main')?.name || '';
+  const sub = dishes.find((d) => d.type === 'sub')?.name || '';
+  const soup = dishes.find((d) => d.type === 'soup')?.name || '';
+  const dessert = dishes.find((d) => d.type === 'dessert')?.name || '';
+
+  return {
+    ...day,
+    servings,
+    dishes,
+    mainDish: main,
+    subDish: sub,
+    soupDish: soup,
+    dessertDish: dessert,
+  };
 };
 
 // 献立の読み込み
@@ -31,25 +99,35 @@ export const loadWeekPlan = (): Record<DayId, DayMenu> => {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.WEEK_PLAN);
     if (data) {
-      const parsed = JSON.parse(data);
-      // dessertDishプロパティが欠落している旧データへのフォールバック対応
-      (Object.keys(parsed) as DayId[]).forEach((d) => {
-        if (!parsed[d].dessertDish) parsed[d].dessertDish = '';
+      const parsed = JSON.parse(data) as Record<DayId, DayMenu>;
+      const keys = Object.keys(parsed) as DayId[];
+      keys.forEach((d) => {
+        parsed[d] = ensureDayDishes(parsed[d]);
       });
       return parsed;
     }
   } catch (e) {
     console.error('Failed to load week plan:', e);
   }
-  return DEFAULT_WEEK_DAYS;
+
+  // 初期値にもdishesを設定
+  const initial = { ...DEFAULT_WEEK_DAYS };
+  (Object.keys(initial) as DayId[]).forEach((d) => {
+    initial[d] = ensureDayDishes(initial[d]);
+  });
+  return initial;
 };
 
 // 献立の保存
 export const saveWeekPlan = (plan: Record<DayId, DayMenu>): void => {
   try {
-    localStorage.setItem(STORAGE_KEYS.WEEK_PLAN, JSON.stringify(plan));
-    // 履歴にも保存（統計分析用）
-    recordPlanHistory(plan);
+    // 保存前にdishesを確実に同期
+    const normalized: Record<DayId, DayMenu> = {} as Record<DayId, DayMenu>;
+    (Object.keys(plan) as DayId[]).forEach((d) => {
+      normalized[d] = ensureDayDishes(plan[d]);
+    });
+    localStorage.setItem(STORAGE_KEYS.WEEK_PLAN, JSON.stringify(normalized));
+    recordPlanHistory(normalized);
   } catch (e) {
     console.error('Failed to save week plan:', e);
   }
@@ -60,7 +138,6 @@ const recordPlanHistory = (plan: Record<DayId, DayMenu>): void => {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.HISTORY);
     const history: Record<DayId, DayMenu>[] = raw ? JSON.parse(raw) : [];
-    // 直近4回分を保持
     history.unshift(plan);
     localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(history.slice(0, 4)));
   } catch (e) {
@@ -78,7 +155,7 @@ export const loadShoppingItems = (): ShoppingItem[] => {
   } catch (e) {
     console.error('Failed to load shopping list:', e);
   }
-  return generateShoppingListFromPlan(DEFAULT_WEEK_DAYS);
+  return generateShoppingListFromPlan(loadWeekPlan(), [], 2);
 };
 
 // 買い物リストの保存
@@ -153,6 +230,28 @@ export const deleteUserTemplate = (templateId: string): void => {
   }
 };
 
+// カレンダー記録の読み込み
+export const loadCalendarRecords = (): Record<string, CalendarRecord> => {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.CALENDAR);
+    if (data) {
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.error('Failed to load calendar records:', e);
+  }
+  return {};
+};
+
+// カレンダー記録の保存
+export const saveCalendarRecords = (records: Record<string, CalendarRecord>): void => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.CALENDAR, JSON.stringify(records));
+  } catch (e) {
+    console.error('Failed to save calendar records:', e);
+  }
+};
+
 // 設定の読み込み
 export const loadAppSettings = (): AppSettings => {
   try {
@@ -181,7 +280,6 @@ export const applyVisualSettings = (settings: AppSettings): void => {
   document.documentElement.setAttribute('data-theme', settings.theme);
   document.documentElement.setAttribute('data-font-size', settings.fontSize);
 
-  // 文字サイズのCSSスケール
   const fontSizes = {
     sm: '14px',
     md: '16px',
@@ -190,51 +288,118 @@ export const applyVisualSettings = (settings: AppSettings): void => {
   document.documentElement.style.fontSize = fontSizes[settings.fontSize] || '16px';
 };
 
-// 献立から買い物リストを抽出生成（曜日は入れずに食材を分類してシンプルにまとめる）
+// --------------------------------------------------------------------------
+// 献立・人数から買い物リストを自動抽出・計算生成する関数
+// --------------------------------------------------------------------------
 export const generateShoppingListFromPlan = (
   plan: Record<DayId, DayMenu>,
-  existingItems: ShoppingItem[] = []
+  existingItems: ShoppingItem[] = [],
+  targetServings: number = 2
 ): ShoppingItem[] => {
-  const itemMap = new Map<string, IngredientCategory>();
-
   // 既存のチェック状態を記憶
   const checkedMap = new Map<string, boolean>();
   existingItems.forEach((item) => {
     checkedMap.set(item.name.toLowerCase().trim(), item.checked);
   });
 
+  const allRecipes = getAllRecipes();
+  const recipeMap = new Map<string, RecipeItem>();
+  allRecipes.forEach((r) => recipeMap.set(r.name.trim(), r));
+
+  // 食材名 -> { category, totalAmount, unit, daySources }
+  interface AggregatedIng {
+    category: IngredientCategory;
+    amount?: number;
+    unit?: string;
+  }
+
+  const ingMap = new Map<string, AggregatedIng>();
+
   const dayOrder: DayId[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
-  // 各曜日の献立から食材を抽出して重複を自動統合
   dayOrder.forEach((dayKey) => {
     const day = plan[dayKey];
     if (!day) return;
 
+    // その日の人数（指定がなければ targetServings）
+    const dayServings = day.servings || targetServings;
+
+    // 料理リストから食材を集約
+    const fallbackDishes: DishEntry[] = [
+      day.mainDish ? { id: '1', name: day.mainDish, type: 'main' as const } : null,
+      day.subDish ? { id: '2', name: day.subDish, type: 'sub' as const } : null,
+      day.soupDish ? { id: '3', name: day.soupDish, type: 'soup' as const } : null,
+      day.dessertDish ? { id: '4', name: day.dessertDish, type: 'dessert' as const } : null,
+    ].filter(Boolean) as DishEntry[];
+
+    const dishes: DishEntry[] = day.dishes && day.dishes.length > 0 ? day.dishes : fallbackDishes;
+
+    dishes.forEach((dish) => {
+      if (!dish.name) return;
+      // レシピDBから食材を取得、またはdishに直接付随している食材、またはday.ingredientsから探す
+      const matchedRecipe = recipeMap.get(dish.name.trim());
+      const ingredients: IngredientItem[] =
+        dish.ingredients ||
+        matchedRecipe?.ingredients ||
+        day.ingredients.filter((i) => i.name.trim() !== '');
+
+      ingredients.forEach((ing) => {
+        const name = ing.name.trim();
+        if (!name) return;
+
+        const baseServings = ing.servings || 2;
+        // 人数倍率で数量を計算
+        const scaled = ing.amount !== undefined ? (ing.amount * dayServings) / baseServings : undefined;
+
+        if (ingMap.has(name)) {
+          const current = ingMap.get(name)!;
+          // 単位が同じなら合算
+          if (scaled !== undefined && current.amount !== undefined && current.unit === ing.unit) {
+            current.amount = Math.round((current.amount + scaled) * 10) / 10;
+          }
+        } else {
+          ingMap.set(name, {
+            category: ing.category || guessCategory(name),
+            amount: scaled !== undefined ? Math.round(scaled * 10) / 10 : undefined,
+            unit: ing.unit,
+          });
+        }
+      });
+    });
+
+    // レシピに登録されていない自由テキスト食材も念のため取り込み
     day.ingredients.forEach((ing) => {
       const name = ing.name.trim();
       if (!name) return;
-      if (!itemMap.has(name)) {
-        itemMap.set(name, ing.category || guessCategory(name));
+      if (!ingMap.has(name)) {
+        ingMap.set(name, {
+          category: ing.category || guessCategory(name),
+          amount: ing.amount,
+          unit: ing.unit,
+        });
       }
     });
   });
 
   const result: ShoppingItem[] = [];
-  itemMap.forEach((category, name) => {
+
+  ingMap.forEach((info, name) => {
     result.push({
       id: 'shop_' + Math.random().toString(36).substring(2, 9),
       name,
-      category,
+      category: info.category,
+      amount: info.amount,
+      unit: info.unit,
       checked: checkedMap.get(name.toLowerCase().trim()) || false,
     });
   });
 
-  // ユーザーが手動追加した買い物アイテム（献立外のもの）も維持
+  // ユーザーが手動追加した買い物アイテム（献立外の食材・日用品など）を維持
   existingItems.forEach((oldItem) => {
-    if (!itemMap.has(oldItem.name.trim())) {
+    if (!ingMap.has(oldItem.name.trim())) {
       result.push({
         ...oldItem,
-        daySources: undefined, // 曜日は完全に除去
+        daySources: undefined,
       });
     }
   });
@@ -242,7 +407,9 @@ export const generateShoppingListFromPlan = (
   return result;
 };
 
-// おまかせランダム自動生成（デザート枠含む）
+// --------------------------------------------------------------------------
+// おまかせランダム自動生成
+// --------------------------------------------------------------------------
 export const generateSmartWeekPlan = (): Record<DayId, DayMenu> => {
   const allRecipes = getAllRecipes();
   const mains = allRecipes.filter((r) => r.type === 'main');
@@ -272,9 +439,42 @@ export const generateSmartWeekPlan = (): Record<DayId, DayMenu> => {
     const main = getByGenre(mains, cfg.genre);
     const sub = getRandom(subs);
     const soup = getRandom(soups);
-    // デザートは週末や折り返し（水・金・土・日）に高頻度で登場
     const hasDessert = idx === 0 || idx === 2 || idx === 4 || idx === 5 || idx === 6;
     const dessert = hasDessert && desserts.length > 0 ? getRandom(desserts) : null;
+
+    const dishes: DishEntry[] = [
+      {
+        id: 'dish_' + Math.random().toString(36).substring(2, 9),
+        name: main.name,
+        type: 'main',
+        ingredients: main.ingredients,
+        servings: 2,
+      },
+      {
+        id: 'dish_' + Math.random().toString(36).substring(2, 9),
+        name: sub.name,
+        type: 'sub',
+        ingredients: sub.ingredients,
+        servings: 2,
+      },
+      {
+        id: 'dish_' + Math.random().toString(36).substring(2, 9),
+        name: soup.name,
+        type: 'soup',
+        ingredients: soup.ingredients,
+        servings: 2,
+      },
+    ];
+
+    if (dessert) {
+      dishes.push({
+        id: 'dish_' + Math.random().toString(36).substring(2, 9),
+        name: dessert.name,
+        type: 'dessert',
+        ingredients: dessert.ingredients,
+        servings: 2,
+      });
+    }
 
     const mergedIngredients = [
       ...main.ingredients,
@@ -296,7 +496,9 @@ export const generateSmartWeekPlan = (): Record<DayId, DayMenu> => {
       subDish: sub.name,
       soupDish: soup.name,
       dessertDish: dessert ? dessert.name : '',
+      dishes,
       ingredients: uniqueIngredients,
+      servings: 2,
       memo: main.tip || '',
     };
   });
@@ -305,7 +507,7 @@ export const generateSmartWeekPlan = (): Record<DayId, DayMenu> => {
 };
 
 // --------------------------------------------------------------------------
-// 統計データ算出ロジック（データ画面用）
+// 統計データ算出
 // --------------------------------------------------------------------------
 export interface MenuStats {
   totalDishes: number;
@@ -355,22 +557,54 @@ export const calculateMenuStats = (currentPlan: Record<DayId, DayMenu>): MenuSta
         freqMap.set(trimmed, { count: 1, type });
       }
 
-      // 肉・魚・野菜の傾向分析
-      if (trimmed.includes('豚') || trimmed.includes('鶏') || trimmed.includes('牛') || trimmed.includes('肉') || trimmed.includes('ハンバーグ') || trimmed.includes('餃子') || trimmed.includes('唐揚げ') || trimmed.includes('チキン')) {
+      if (
+        trimmed.includes('豚') ||
+        trimmed.includes('鶏') ||
+        trimmed.includes('牛') ||
+        trimmed.includes('肉') ||
+        trimmed.includes('ハンバーグ') ||
+        trimmed.includes('餃子') ||
+        trimmed.includes('唐揚げ') ||
+        trimmed.includes('チキン')
+      ) {
         meatCount++;
-      } else if (trimmed.includes('魚') || trimmed.includes('鮭') || trimmed.includes('さば') || trimmed.includes('鯖') || trimmed.includes('ぶり') || trimmed.includes('アジ') || trimmed.includes('エビ') || trimmed.includes('あさり')) {
+      } else if (
+        trimmed.includes('魚') ||
+        trimmed.includes('鮭') ||
+        trimmed.includes('さば') ||
+        trimmed.includes('鯖') ||
+        trimmed.includes('ぶり') ||
+        trimmed.includes('アジ') ||
+        trimmed.includes('エビ') ||
+        trimmed.includes('あさり')
+      ) {
         fishCount++;
-      } else if (trimmed.includes('野菜') || trimmed.includes('豆腐') || trimmed.includes('サラダ') || trimmed.includes('ナムル') || trimmed.includes('ほうれん草') || trimmed.includes('ピーマン') || trimmed.includes('大根')) {
+      } else if (
+        trimmed.includes('野菜') ||
+        trimmed.includes('豆腐') ||
+        trimmed.includes('サラダ') ||
+        trimmed.includes('ナムル') ||
+        trimmed.includes('ほうれん草') ||
+        trimmed.includes('ピーマン') ||
+        trimmed.includes('大根')
+      ) {
         vegCount++;
       } else {
         otherCount++;
       }
     };
 
-    registerDish(day.mainDish, 'main');
-    registerDish(day.subDish, 'sub');
-    registerDish(day.soupDish, 'soup');
-    registerDish(day.dessertDish, 'dessert');
+    if (day.dishes && day.dishes.length > 0) {
+      day.dishes.forEach((dish) => {
+        const t = dish.type === 'other' ? 'sub' : (dish.type as 'main' | 'sub' | 'soup' | 'dessert');
+        registerDish(dish.name, t);
+      });
+    } else {
+      registerDish(day.mainDish, 'main');
+      registerDish(day.subDish, 'sub');
+      registerDish(day.soupDish, 'soup');
+      registerDish(day.dessertDish, 'dessert');
+    }
 
     dayDishCounts[d] = {
       dayLabel: day.dayLabel,
@@ -381,7 +615,6 @@ export const calculateMenuStats = (currentPlan: Record<DayId, DayMenu>): MenuSta
 
   const totalDishes = mainCount + subCount + soupCount + dessertCount;
 
-  // 頻度順ソート（上位）
   const dishFrequency = Array.from(freqMap.entries())
     .map(([name, val]) => ({ name, count: val.count, type: val.type }))
     .sort((a, b) => b.count - a.count);
@@ -414,7 +647,7 @@ export const calculateMenuStats = (currentPlan: Record<DayId, DayMenu>): MenuSta
 };
 
 // --------------------------------------------------------------------------
-// データのエクスポート・インポート機能（バックアップとアカウント間移行用）
+// データのエクスポート・インポート・ダウンロード機能（バックアップ保存）
 // --------------------------------------------------------------------------
 export interface BackupData {
   version: number;
@@ -425,13 +658,14 @@ export interface BackupData {
     customRecipes?: RecipeItem[];
     favorites?: SavedTemplate[];
     settings?: AppSettings;
+    calendarRecords?: Record<string, CalendarRecord>;
   };
 }
 
 // 全データをJSON文字列としてエクスポート
 export const exportAllData = (): string => {
   const backup: BackupData = {
-    version: 2,
+    version: 3,
     exportedAt: new Date().toISOString(),
     data: {
       weekPlan: loadWeekPlan(),
@@ -439,9 +673,30 @@ export const exportAllData = (): string => {
       customRecipes: loadCustomRecipes(),
       favorites: loadSavedTemplates(),
       settings: loadAppSettings(),
+      calendarRecords: loadCalendarRecords(),
     },
   };
   return JSON.stringify(backup, null, 2);
+};
+
+// ファイルとしてダウンロード保存する機能
+export const downloadBackupFile = (): void => {
+  const jsonStr = exportAllData();
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(
+    now.getDate()
+  ).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+  const filename = `kondate_backup_${dateStr}.json`;
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 };
 
 // JSON文字列から全データをインポートしてLocalStorageに保存
@@ -457,6 +712,7 @@ export const importAllData = (jsonStr: string): { success: boolean; error?: stri
     let customRecipes: any = null;
     let favorites: any = null;
     let settings: any = null;
+    let calendarRecords: any = null;
 
     if (parsed.data) {
       weekPlan = parsed.data.weekPlan;
@@ -464,12 +720,14 @@ export const importAllData = (jsonStr: string): { success: boolean; error?: stri
       customRecipes = parsed.data.customRecipes;
       favorites = parsed.data.favorites;
       settings = parsed.data.settings;
+      calendarRecords = parsed.data.calendarRecords;
     } else {
       weekPlan = typeof parsed.weekPlan === 'string' ? JSON.parse(parsed.weekPlan) : parsed.weekPlan;
       shoppingList = typeof parsed.shoppingList === 'string' ? JSON.parse(parsed.shoppingList) : parsed.shoppingList;
       customRecipes = typeof parsed.customRecipes === 'string' ? JSON.parse(parsed.customRecipes) : parsed.customRecipes;
       favorites = typeof parsed.favorites === 'string' ? JSON.parse(parsed.favorites) : parsed.favorites;
       settings = typeof parsed.settings === 'string' ? JSON.parse(parsed.settings) : parsed.settings;
+      calendarRecords = typeof parsed.calendarRecords === 'string' ? JSON.parse(parsed.calendarRecords) : parsed.calendarRecords;
     }
 
     if (weekPlan) localStorage.setItem(STORAGE_KEYS.WEEK_PLAN, JSON.stringify(weekPlan));
@@ -477,10 +735,10 @@ export const importAllData = (jsonStr: string): { success: boolean; error?: stri
     if (customRecipes) localStorage.setItem(STORAGE_KEYS.CUSTOM_RECIPES, JSON.stringify(customRecipes));
     if (favorites) localStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify(favorites));
     if (settings) localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    if (calendarRecords) localStorage.setItem(STORAGE_KEYS.CALENDAR, JSON.stringify(calendarRecords));
 
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message || 'データの復元に失敗しました' };
   }
 };
-
