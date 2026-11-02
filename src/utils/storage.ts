@@ -15,9 +15,14 @@ import {
   PRESET_RECIPES,
   PRESET_TEMPLATES,
   guessCategory,
+  parseIngredientText,
 } from '../data/presetRecipes';
 
+// データ構造のバージョン（上げると旧バージョンの保存データを自動で最新の分量・分類データへアップグレードする）
+const CURRENT_DATA_VERSION = 3;
+
 const STORAGE_KEYS = {
+  DATA_VERSION: 'kondate_data_version',
   WEEK_PLAN: 'kondate_weekly_plan_v2',
   SHOPPING_LIST: 'kondate_shopping_list_v2',
   FAVORITES: 'kondate_saved_templates_v2',
@@ -128,16 +133,24 @@ export const ensureDayDishes = (day: DayMenu, customRecipes?: RecipeItem[]): Day
   };
 };
 
-// 献立の読み込み
+// 献立の読み込み（旧バージョンのデータが残っている場合は自動でv3の分量付きデータへ移行する）
 export const loadWeekPlan = (): Record<DayId, DayMenu> => {
   try {
+    const savedVer = Number(localStorage.getItem(STORAGE_KEYS.DATA_VERSION) || '0');
     const data = localStorage.getItem(STORAGE_KEYS.WEEK_PLAN);
+
     if (data) {
       const parsed = JSON.parse(data) as Record<DayId, DayMenu>;
       const keys = Object.keys(parsed) as DayId[];
       keys.forEach((d) => {
         parsed[d] = ensureDayDishes(parsed[d]);
       });
+
+      if (savedVer < CURRENT_DATA_VERSION) {
+        localStorage.setItem(STORAGE_KEYS.WEEK_PLAN, JSON.stringify(parsed));
+        localStorage.removeItem(STORAGE_KEYS.SHOPPING_LIST);
+        localStorage.setItem(STORAGE_KEYS.DATA_VERSION, String(CURRENT_DATA_VERSION));
+      }
       return parsed;
     }
   } catch (e) {
@@ -149,6 +162,11 @@ export const loadWeekPlan = (): Record<DayId, DayMenu> => {
   (Object.keys(initial) as DayId[]).forEach((d) => {
     initial[d] = ensureDayDishes(initial[d]);
   });
+  try {
+    localStorage.setItem(STORAGE_KEYS.DATA_VERSION, String(CURRENT_DATA_VERSION));
+  } catch {
+    // ignore
+  }
   return initial;
 };
 
@@ -205,12 +223,22 @@ export const saveShoppingItems = (items: ShoppingItem[]): void => {
   }
 };
 
-// ユーザー登録カスタムメニューの読み込み
+// ユーザー登録カスタムメニューの読み込み（材料の分類・分量を最新のルールで正規化する）
 export const loadCustomRecipes = (): RecipeItem[] => {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.CUSTOM_RECIPES);
     if (data) {
-      return JSON.parse(data);
+      const list = JSON.parse(data) as RecipeItem[];
+      return list.map((r) => ({
+        ...r,
+        ingredients: (r.ingredients || []).map((ing) => {
+          if (ing.amount === undefined) {
+            const parsed = parseIngredientText(ing.name);
+            return { ...ing, ...parsed };
+          }
+          return { ...ing, category: guessCategory(ing.name) };
+        }),
+      }));
     }
   } catch (e) {
     console.error('Failed to load custom recipes:', e);

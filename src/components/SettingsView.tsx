@@ -334,7 +334,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         <div className="app-version-footer">
-          <p>こんだてウィークリー v2.0 (Mobile Web & Android Edition)</p>
+          <p>こんだてウィークリー v3.0 (レシピ・分量計算・シンプルUI対応版)</p>
           <p className="footer-sub">Google Play 販売可能・ローカルストレージ駆動</p>
         </div>
       </div>
