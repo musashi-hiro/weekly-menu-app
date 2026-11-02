@@ -1,17 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import {
-  X,
-  Check,
-  Plus,
-  Copy,
-  Trash2,
-  RefreshCw,
-  CheckCheck,
-  ShoppingBag,
-  Users,
-} from 'lucide-react';
+import { X, Check, Plus, Copy, Trash2, RefreshCw, CheckCheck, ShoppingBag, ListChecks, FileText } from 'lucide-react';
 import type { ShoppingItem, IngredientCategory } from '../types';
-import { CATEGORY_NAMES, guessCategory } from '../data/presetRecipes';
+import { guessCategory } from '../data/presetRecipes';
+import { groupShoppingItems, buildShoppingText, formatShoppingAmount } from '../utils/shoppingFormat';
 
 interface ShoppingListModalProps {
   isOpen: boolean;
@@ -40,33 +31,16 @@ export const ShoppingListModal: React.FC<ShoppingListModalProps> = ({
 }) => {
   const [inputName, setInputName] = useState('');
   const [inputAmount, setInputAmount] = useState('');
-  const [inputUnit, setInputUnit] = useState('');
-  const [inputCategory, setInputCategory] = useState<IngredientCategory>('vegetable');
+  const [inputCategory, setInputCategory] = useState<IngredientCategory | 'auto'>('auto');
   const [copyFeedback, setCopyFeedback] = useState(false);
-  const [filterHideChecked, setFilterHideChecked] = useState(false);
+  const [hideChecked, setHideChecked] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'text'>('list');
 
-  const groupedItems = useMemo(() => {
-    const map: Record<IngredientCategory, ShoppingItem[]> = {
-      meat_fish: [],
-      vegetable: [],
-      dairy_egg: [],
-      seasoning: [],
-      staple: [],
-      other: [],
-    };
-
-    items.forEach((item) => {
-      if (filterHideChecked && item.checked) return;
-      const cat = item.category || 'other';
-      if (map[cat]) {
-        map[cat].push(item);
-      } else {
-        map.other.push(item);
-      }
-    });
-
-    return map;
-  }, [items, filterHideChecked]);
+  const groups = useMemo(
+    () => groupShoppingItems(items.filter((i) => !(hideChecked && i.checked))),
+    [items, hideChecked]
+  );
+  const shoppingText = useMemo(() => buildShoppingText(items, servings), [items, servings]);
 
   if (!isOpen) return null;
 
@@ -76,257 +50,203 @@ export const ShoppingListModal: React.FC<ShoppingListModalProps> = ({
 
   const handleAddCustom = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputName.trim()) return;
-    const cat = inputCategory || guessCategory(inputName);
-    const amt = inputAmount ? parseFloat(inputAmount) : undefined;
-    onAddItem(inputName.trim(), cat, amt, inputUnit.trim() || undefined);
+    const name = inputName.trim();
+    if (!name) return;
+    const cat = inputCategory === 'auto' ? guessCategory(name) : inputCategory;
+    // 数量欄は「2本」「300g」のような自由入力。数字＋単位に分けて保存する
+    const m = inputAmount.trim().match(/^([\d.]+)\s*(.*)$/);
+    const amount = m ? parseFloat(m[1]) : undefined;
+    const unit = m ? m[2] || '個' : undefined;
+    onAddItem(name, cat, amount, unit);
     setInputName('');
     setInputAmount('');
-    setInputUnit('');
   };
 
   const handleCopyText = async () => {
-    const categories: IngredientCategory[] = [
-      'meat_fish',
-      'vegetable',
-      'dairy_egg',
-      'seasoning',
-      'staple',
-      'other',
-    ];
-    let text = `🛒 【今週の買い物リスト】(${servings}人分・残り${remainingCount}品)\n`;
-
-    categories.forEach((catKey) => {
-      const catItems = items.filter((i) => (i.category || 'other') === catKey && !i.checked);
-      if (catItems.length > 0) {
-        text += `\n■ ${CATEGORY_NAMES[catKey].icon} ${CATEGORY_NAMES[catKey].label}\n`;
-        catItems.forEach((i) => {
-          const amountStr = i.amount !== undefined && i.unit ? ` (${i.amount}${i.unit})` : '';
-          text += `  □ ${i.name}${amountStr}\n`;
-        });
-      }
-    });
-
-    text += `\n-- こんだてウィークリーより`;
-
     try {
-      await navigator.clipboard.writeText(text);
-      setCopyFeedback(true);
-      setTimeout(() => setCopyFeedback(false), 2000);
-    } catch (e) {
-      // フォールバック
+      await navigator.clipboard.writeText(shoppingText);
+    } catch {
+      // クリップボードAPIが使えない環境向けのフォールバック
       const textarea = document.createElement('textarea');
-      textarea.value = text;
+      textarea.value = shoppingText;
       document.body.appendChild(textarea);
       textarea.select();
       document.execCommand('copy');
       document.body.removeChild(textarea);
-      setCopyFeedback(true);
-      setTimeout(() => setCopyFeedback(false), 2000);
     }
+    setCopyFeedback(true);
+    setTimeout(() => setCopyFeedback(false), 2000);
   };
 
   return (
     <div className="modal-backdrop animate-fade-in" onClick={onClose}>
-      <div
-        className="modal-container shopping-modal animate-slide-up"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* モーダルヘッダー */}
+      <div className="modal-content shop-modal animate-slide-up" onClick={(e) => e.stopPropagation()}>
+        {/* ヘッダー */}
         <div className="modal-header">
-          <div className="modal-title-wrap">
-            <ShoppingBag size={20} className="modal-title-icon text-primary" />
-            <h2 className="modal-title">自動買い物リスト</h2>
+          <div className="modal-title-with-icon">
+            <ShoppingBag size={20} className="text-primary" />
+            <h2 className="modal-title">買い物リスト</h2>
           </div>
-          <button className="modal-close-btn" onClick={onClose} aria-label="閉じる">
-            <X size={20} />
+          <button className="icon-btn-plain" onClick={onClose} aria-label="閉じる">
+            <X size={22} />
           </button>
         </div>
 
-        {/* 人数連動バー＆同期ボタン */}
-        <div className="shopping-servings-bar">
-          <div className="servings-selector">
-            <span className="servings-label">
-              <Users size={14} />
-              <span>計算人数:</span>
-            </span>
-            <div className="servings-stepper">
-              <button
-                className="stepper-btn"
-                onClick={() => onChangeServings(Math.max(1, servings - 1))}
-                disabled={servings <= 1}
-              >
-                -
-              </button>
-              <span className="servings-val">{servings} 人分</span>
-              <button
-                className="stepper-btn"
-                onClick={() => onChangeServings(Math.min(10, servings + 1))}
-                disabled={servings >= 10}
-              >
-                +
-              </button>
-            </div>
+        {/* 人数・再計算 */}
+        <div className="shop-toolbar">
+          <div className="shop-servings">
+            <span className="shop-toolbar-label">人数</span>
+            <button
+              className="stepper-round"
+              onClick={() => onChangeServings(Math.max(1, servings - 1))}
+              disabled={servings <= 1}
+              aria-label="人数を減らす"
+            >
+              −
+            </button>
+            <span className="shop-servings-val">{servings}人分</span>
+            <button
+              className="stepper-round"
+              onClick={() => onChangeServings(Math.min(10, servings + 1))}
+              disabled={servings >= 10}
+              aria-label="人数を増やす"
+            >
+              ＋
+            </button>
           </div>
-
-          <button
-            className="btn-sync-menu"
-            onClick={onSyncFromMenu}
-            title="一週間献立の材料を現在の人数に合わせて再計算・再反映"
-          >
-            <RefreshCw size={13} />
+          <button className="btn-outline-sm" onClick={onSyncFromMenu} title="今週の献立から材料を集め直します">
+            <RefreshCw size={14} />
             <span>献立から再計算</span>
           </button>
         </div>
 
-        {/* ステータスバー */}
-        <div className="shopping-status-bar">
-          <div className="shopping-counter">
-            残り <span className="highlight-count">{remainingCount}</span> 品 / 全 {totalCount} 品
-          </div>
-          <div className="shopping-actions-group">
-            <label className="filter-checkbox-label">
-              <input
-                type="checkbox"
-                checked={filterHideChecked}
-                onChange={(e) => setFilterHideChecked(e.target.checked)}
-              />
-              <span>購入済を隠す</span>
-            </label>
-            {checkedCount > 0 && (
-              <button
-                className="btn-clear-checked"
-                onClick={onClearChecked}
-                title="チェックしたアイテムを一括削除"
-              >
-                <Trash2 size={13} />
-                <span>購入済削除</span>
-              </button>
-            )}
-          </div>
+        {/* 表示切り替え */}
+        <div className="segmented">
+          <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>
+            <ListChecks size={16} />
+            <span>チェックリスト</span>
+          </button>
+          <button className={viewMode === 'text' ? 'active' : ''} onClick={() => setViewMode('text')}>
+            <FileText size={16} />
+            <span>メモ用テキスト</span>
+          </button>
         </div>
 
-        {/* 食材リスト（ジャンル別グループ表示） */}
-        <div className="shopping-items-list custom-scrollbar">
-          {items.length === 0 ? (
-            <div className="empty-shopping-state">
-              <CheckCheck size={40} className="empty-icon text-success" />
-              <p className="empty-title">買い物リストは空です！</p>
-              <p className="empty-subtitle">
-                「献立から再計算」を押すか、下の入力欄から追加してください。
-              </p>
+        {viewMode === 'list' ? (
+          <>
+            <div className="shop-status">
+              <span>
+                残り <strong>{remainingCount}</strong> 品 / 全 {totalCount} 品
+              </span>
+              <div className="shop-status-actions">
+                <label className="check-label">
+                  <input type="checkbox" checked={hideChecked} onChange={(e) => setHideChecked(e.target.checked)} />
+                  購入済を隠す
+                </label>
+                {checkedCount > 0 && (
+                  <button className="btn-text-danger" onClick={onClearChecked}>
+                    <Trash2 size={14} />
+                    購入済を削除
+                  </button>
+                )}
+              </div>
             </div>
-          ) : (
-            (
-              [
-                'meat_fish',
-                'vegetable',
-                'dairy_egg',
-                'seasoning',
-                'staple',
-                'other',
-              ] as IngredientCategory[]
-            ).map((catKey) => {
-              const catGroup = groupedItems[catKey];
-              if (!catGroup || catGroup.length === 0) return null;
-              const catMeta = CATEGORY_NAMES[catKey];
 
-              return (
-                <div key={catKey} className="shopping-cat-section">
-                  <div className="shopping-cat-header">
-                    <span className="cat-icon">{catMeta.icon}</span>
-                    <span className="cat-title">{catMeta.label}</span>
-                    <span className="cat-count">({catGroup.length})</span>
-                  </div>
-
-                  <div className="shopping-cat-items">
-                    {catGroup.map((item) => (
-                      <div
-                        key={item.id}
-                        className={`shopping-item-row ${item.checked ? 'checked' : ''}`}
-                        onClick={() => onToggleItem(item.id)}
-                      >
-                        <div className={`custom-checkbox ${item.checked ? 'checked' : ''}`}>
-                          {item.checked && <Check size={14} />}
-                        </div>
-                        <div className="shopping-item-details">
-                          <span className="item-name">{item.name}</span>
-                          {item.amount !== undefined && item.unit && (
-                            <span className="item-amount-badge">
-                              {item.amount}
-                              {item.unit}
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          className="item-delete-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDeleteItem(item.id);
-                          }}
-                          aria-label="削除"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+            <div className="shop-list">
+              {items.length === 0 ? (
+                <div className="empty-box">
+                  <CheckCheck size={36} className="empty-icon" />
+                  <p>買い物リストは空です</p>
+                  <p className="empty-sub">「献立から再計算」を押すか、下の欄から追加してください。</p>
                 </div>
-              );
-            })
-          )}
-        </div>
+              ) : (
+                groups.map((group) => (
+                  <section key={group.key} className="shop-group">
+                    <h3 className="shop-group-title">
+                      <span>{group.icon}</span>
+                      <span>{group.label}</span>
+                      <span className="shop-group-count">{group.items.length}</span>
+                    </h3>
+                    <ul className="shop-rows">
+                      {group.items.map((item) => {
+                        const amount = formatShoppingAmount(item);
+                        return (
+                          <li
+                            key={item.id}
+                            className={`shop-row ${item.checked ? 'checked' : ''}`}
+                            onClick={() => onToggleItem(item.id)}
+                          >
+                            <span className={`checkbox-box ${item.checked ? 'on' : ''}`}>
+                              {item.checked && <Check size={14} strokeWidth={3} />}
+                            </span>
+                            <span className="shop-row-name">{item.name}</span>
+                            {amount && <span className="shop-row-amount">{amount}</span>}
+                            <button
+                              className="shop-row-delete"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteItem(item.id);
+                              }}
+                              aria-label={`${item.name}を削除`}
+                            >
+                              <X size={16} />
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+                ))
+              )}
+            </div>
 
-        {/* 自由追加フォーム */}
-        <form className="shopping-add-form" onSubmit={handleAddCustom}>
-          <div className="add-inputs-row">
-            <select
-              value={inputCategory}
-              onChange={(e) => setInputCategory(e.target.value as IngredientCategory)}
-              className="cat-select"
-            >
-              <option value="meat_fish">🥩 肉・魚</option>
-              <option value="vegetable">🥬 野菜</option>
-              <option value="dairy_egg">🥚 卵・乳</option>
-              <option value="seasoning">🧂 調味料</option>
-              <option value="staple">🍚 主食</option>
-              <option value="other">🛒 その他</option>
-            </select>
-            <input
-              type="text"
-              placeholder="品名（例: 牛乳、ラップ）"
-              value={inputName}
-              onChange={(e) => setInputName(e.target.value)}
-              className="name-input"
-            />
-            <input
-              type="number"
-              placeholder="数量"
-              value={inputAmount}
-              onChange={(e) => setInputAmount(e.target.value)}
-              className="amount-input"
-              step="any"
-              min="0"
-            />
-            <input
-              type="text"
-              placeholder="単位"
-              value={inputUnit}
-              onChange={(e) => setInputUnit(e.target.value)}
-              className="unit-input"
-            />
-            <button type="submit" className="add-submit-btn" disabled={!inputName.trim()}>
-              <Plus size={16} />
-              <span>追加</span>
-            </button>
+            {/* 自由追加フォーム */}
+            <form className="shop-add" onSubmit={handleAddCustom}>
+              <select
+                value={inputCategory}
+                onChange={(e) => setInputCategory(e.target.value as IngredientCategory | 'auto')}
+                className="shop-add-cat"
+                aria-label="分類"
+              >
+                <option value="auto">自動分類</option>
+                <option value="meat_fish">肉・魚</option>
+                <option value="vegetable">野菜・果物</option>
+                <option value="dairy_egg">卵・乳製品</option>
+                <option value="staple">主食・粉類</option>
+                <option value="seasoning">調味料</option>
+                <option value="other">その他</option>
+              </select>
+              <input
+                type="text"
+                placeholder="品名（例: 牛乳）"
+                value={inputName}
+                onChange={(e) => setInputName(e.target.value)}
+                className="shop-add-name"
+              />
+              <input
+                type="text"
+                placeholder="数量"
+                value={inputAmount}
+                onChange={(e) => setInputAmount(e.target.value)}
+                className="shop-add-amount"
+              />
+              <button type="submit" className="btn-solid-sm" disabled={!inputName.trim()} aria-label="追加">
+                <Plus size={18} />
+              </button>
+            </form>
+          </>
+        ) : (
+          <div className="shop-text-wrap">
+            <p className="shop-text-hint">未購入の品だけを分類ごとに1列で並べています。そのままメモ帳やLINEに貼り付けできます。</p>
+            <textarea className="shop-textarea" readOnly value={shoppingText} onFocus={(e) => e.target.select()} />
           </div>
-        </form>
+        )}
 
-        {/* モーダルフッター（共有・コピー） */}
-        <div className="modal-footer shopping-footer">
-          <button className="btn-copy-shopping" onClick={handleCopyText}>
-            <Copy size={16} />
-            <span>{copyFeedback ? 'コピーしました！' : 'リストをコピー (LINE・メモ用)'}</span>
+        {/* コピー */}
+        <div className="shop-footer">
+          <button className={`btn-primary-block ${copyFeedback ? 'done' : ''}`} onClick={handleCopyText}>
+            {copyFeedback ? <Check size={18} /> : <Copy size={18} />}
+            <span>{copyFeedback ? 'コピーしました' : 'メモ帳用にコピー'}</span>
           </button>
         </div>
       </div>

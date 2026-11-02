@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { Header } from './components/Header';
 import { Navbar } from './components/Navbar';
@@ -9,6 +9,7 @@ import { FavoritesView } from './components/FavoritesView';
 import { StatsView } from './components/StatsView';
 import { SettingsView } from './components/SettingsView';
 import { RecipeSelectModal } from './components/RecipeSelectModal';
+import { RecipeDetailModal } from './components/RecipeDetailModal';
 import { ShoppingListModal } from './components/ShoppingListModal';
 import { InfoModal } from './components/InfoModal';
 import type {
@@ -36,6 +37,7 @@ import {
   applyVisualSettings,
   generateShoppingListFromPlan,
   generateSmartWeekPlan,
+  ensureDayDishes,
   loadSavedTemplates,
   saveUserTemplate,
   deleteUserTemplate,
@@ -43,6 +45,8 @@ import {
   saveCalendarRecords,
 } from './utils/storage';
 import './App.css';
+
+const DAY_ORDER: DayId[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 export const App: React.FC = () => {
   // 設定（テーマ・文字サイズ・通知・基本人数）
@@ -75,17 +79,28 @@ export const App: React.FC = () => {
   const [selectModalState, setSelectModalState] = useState<{
     isOpen: boolean;
     dayId: DayId;
-    slot: 'mainDish' | 'subDish' | 'soupDish' | 'dessertDish';
+    category: DishCategory;
     currentValue: string;
+    targetDishId?: string;
   }>({
     isOpen: false,
     dayId: 'mon',
-    slot: 'mainDish',
+    category: 'main',
     currentValue: '',
+  });
+
+  // 献立・カレンダーから直接レシピ（作り方）を見るモーダル
+  const [detailModalState, setDetailModalState] = useState<{
+    recipe: RecipeItem | null;
+    servings: number;
+  }>({
+    recipe: null,
+    servings: 2,
   });
 
   // トースト通知
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const lastNotifiedKeyRef = useRef<string>('');
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -119,22 +134,91 @@ export const App: React.FC = () => {
     saveCustomRecipes(customRecipes);
   }, [customRecipes]);
 
+  // リマインダー通知の定期チェック（設定時刻になったら今日の献立を通知）
+  useEffect(() => {
+    if (!settings.notifyEnabled || !settings.notifyTime) return;
+
+    const checkNotify = () => {
+      const now = new Date();
+      const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const dateKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}_${hhmm}`;
+
+      if (hhmm === settings.notifyTime && lastNotifiedKeyRef.current !== dateKey) {
+        lastNotifiedKeyRef.current = dateKey;
+        const dayMap: DayId[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+        const todayPlan = weekPlan[dayMap[now.getDay()]];
+        const menuText = todayPlan?.mainDish
+          ? `今日の主菜は「${todayPlan.mainDish}」です！`
+          : '今日のお夕食の献立を確認しましょう！';
+
+        if ('Notification' in window && Notification.permission === 'granted') {
+          try {
+            new Notification('🍳 こんだてウィークリー', {
+              body: menuText,
+              icon: '/favicon.svg',
+            });
+          } catch {
+            // ignore
+          }
+        }
+        showToast(`🔔 ${menuText}`);
+      }
+    };
+
+    checkNotify();
+    const timer = window.setInterval(checkNotify, 30000);
+    return () => window.clearInterval(timer);
+  }, [settings.notifyEnabled, settings.notifyTime, weekPlan]);
+
+  // 全レシピ（プリセット＋カスタム）
+  const allRecipes = [...customRecipes, ...PRESET_RECIPES];
+
+  // 一つの曜日を更新し、同時に買い物リストも連動更新する共通関数
+  const handleUpdateDayAndSync = (dayId: DayId, updatedDay: DayMenu) => {
+    const normalizedDay = ensureDayDishes(updatedDay, customRecipes);
+    setWeekPlan((prev) => {
+      const nextPlan = { ...prev, [dayId]: normalizedDay };
+      setShoppingItems((prevShop) =>
+        generateShoppingListFromPlan(nextPlan, prevShop, globalServings)
+      );
+      return nextPlan;
+    });
+  };
+
+  // 全体の人数を変更し、全曜日と買い物リストに即座に反映する共通関数
+  const handleChangeGlobalServings = (newServings: number) => {
+    if (newServings < 1 || newServings > 10) return;
+    setGlobalServings(newServings);
+    setWeekPlan((prev) => {
+      const nextPlan = { ...prev };
+      DAY_ORDER.forEach((dId) => {
+        if (nextPlan[dId]) {
+          nextPlan[dId] = ensureDayDishes(
+            { ...nextPlan[dId], servings: newServings },
+            customRecipes
+          );
+        }
+      });
+      setShoppingItems((prevShop) =>
+        generateShoppingListFromPlan(nextPlan, prevShop, newServings)
+      );
+      return nextPlan;
+    });
+  };
+
   // 設定更新ハンドラー
   const handleUpdateSettings = (newSettings: AppSettings) => {
     setSettings(newSettings);
     saveAppSettings(newSettings);
     if (newSettings.defaultServings && newSettings.defaultServings !== globalServings) {
-      setGlobalServings(newSettings.defaultServings);
+      handleChangeGlobalServings(newSettings.defaultServings);
     }
     showToast('⚙️ 設定を更新しました');
   };
 
-  // 全レシピ（プリセット＋カスタム）
-  const allRecipes = [...customRecipes, ...PRESET_RECIPES];
-
   // 全曜日のおまかせ一括生成
   const handleRandomizeAll = () => {
-    const newPlan = generateSmartWeekPlan();
+    const newPlan = generateSmartWeekPlan(globalServings);
     setWeekPlan(newPlan);
 
     // 買い物リスト連動（現在の人数で再計算）
@@ -148,7 +232,7 @@ export const App: React.FC = () => {
         spread: 60,
         origin: { y: 0.3 },
       });
-    } catch (e) {
+    } catch {
       // ignore
     }
 
@@ -157,47 +241,37 @@ export const App: React.FC = () => {
 
   // 一つの曜日だけシャッフル
   const handleShuffleDay = (dayId: DayId) => {
-    const all = getAllRecipesFromState();
-    const mains = all.filter((r) => r.type === 'main');
-    const subs = all.filter((r) => r.type === 'sub');
-    const soups = all.filter((r) => r.type === 'soup');
-    const desserts = all.filter((r) => r.type === 'dessert');
+    const mains = allRecipes.filter((r) => r.type === 'main');
+    const subs = allRecipes.filter((r) => r.type === 'sub');
+    const soups = allRecipes.filter((r) => r.type === 'soup');
+    const desserts = allRecipes.filter((r) => r.type === 'dessert');
 
-    const getRandom = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
-    const main = getRandom(mains);
-    const sub = getRandom(subs);
-    const soup = getRandom(soups);
-    const dessert = desserts.length > 0 ? getRandom(desserts) : null;
-
-    const merged = [
-      ...main.ingredients,
-      ...sub.ingredients,
-      ...soup.ingredients.filter((i) => i.name !== '味噌・和風だし'),
-      ...(dessert ? dessert.ingredients : []),
-    ];
-    const unique = merged.filter(
-      (item, index, self) => index === self.findIndex((t) => t.name === item.name)
-    );
+    const pickRandom = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+    const main = pickRandom(mains);
+    const sub = pickRandom(subs);
+    const soup = pickRandom(soups);
+    const dessert = desserts.length > 0 ? pickRandom(desserts) : null;
 
     const targetServings = weekPlan[dayId]?.servings || globalServings;
+    const stamp = Date.now();
 
     const newDishes: DishEntry[] = [
       {
-        id: 'dish_' + Math.random().toString(36).substring(2, 9),
+        id: `dish_${stamp}_1`,
         name: main.name,
         type: 'main',
         ingredients: main.ingredients,
         servings: targetServings,
       },
       {
-        id: 'dish_' + Math.random().toString(36).substring(2, 9),
+        id: `dish_${stamp}_2`,
         name: sub.name,
         type: 'sub',
         ingredients: sub.ingredients,
         servings: targetServings,
       },
       {
-        id: 'dish_' + Math.random().toString(36).substring(2, 9),
+        id: `dish_${stamp}_3`,
         name: soup.name,
         type: 'soup',
         ingredients: soup.ingredients,
@@ -207,7 +281,7 @@ export const App: React.FC = () => {
 
     if (dessert) {
       newDishes.push({
-        id: 'dish_' + Math.random().toString(36).substring(2, 9),
+        id: `dish_${stamp}_4`,
         name: dessert.name,
         type: 'dessert',
         ingredients: dessert.ingredients,
@@ -215,79 +289,58 @@ export const App: React.FC = () => {
       });
     }
 
-    setWeekPlan((prev) => {
-      const updated = {
-        ...prev,
-        [dayId]: {
-          ...prev[dayId],
-          mainDish: main.name,
-          subDish: sub.name,
-          soupDish: soup.name,
-          dessertDish: dessert ? dessert.name : '',
-          dishes: newDishes,
-          ingredients: unique,
-          memo: main.tip || '',
-        },
-      };
-      // 買い物リストも追従更新
-      setShoppingItems((s) => generateShoppingListFromPlan(updated, s, globalServings));
-      return updated;
-    });
+    const updatedDay = ensureDayDishes(
+      {
+        ...weekPlan[dayId],
+        dishes: newDishes,
+        servings: targetServings,
+        memo: main.tip || '',
+      },
+      customRecipes
+    );
 
+    handleUpdateDayAndSync(dayId, updatedDay);
     showToast(`🎲 ${weekPlan[dayId].dayLabel}の献立を再抽選しました！`);
-  };
-
-  const getAllRecipesFromState = (): RecipeItem[] => {
-    return [...customRecipes, ...PRESET_RECIPES];
   };
 
   // 料理選択モーダルを開く
   const handleOpenSlotSelect = (
     dayId: DayId,
-    slot: 'mainDish' | 'subDish' | 'soupDish' | 'dessertDish',
-    currentValue: string
+    category: DishCategory,
+    currentValue: string,
+    targetDishId?: string
   ) => {
     setSelectModalState({
       isOpen: true,
       dayId,
-      slot,
+      category,
       currentValue,
+      targetDishId,
     });
   };
 
-  // 料理選択完了
+  // 料理選択完了（選択した dish.id をピンポイントで更新し、古い料理の材料は残さない）
   const handleSelectRecipe = (recipeName: string, matchedRecipe?: RecipeItem) => {
-    const { dayId, slot } = selectModalState;
+    const { dayId, category, targetDishId } = selectModalState;
     const currentDay = weekPlan[dayId];
     if (!currentDay) return;
 
-    let updatedIngredients = [...currentDay.ingredients];
+    const recipeObj = matchedRecipe || allRecipes.find((r) => r.name === recipeName);
+    const currentDishes = currentDay.dishes ? [...currentDay.dishes] : [];
 
-    if (matchedRecipe && matchedRecipe.ingredients.length > 0) {
-      matchedRecipe.ingredients.forEach((ing) => {
-        if (!updatedIngredients.some((i) => i.name === ing.name)) {
-          updatedIngredients.push(ing);
-        }
-      });
+    // targetDishId があればその要素を、なければ同じカテゴリの先頭要素を特定
+    let existingIndex = targetDishId
+      ? currentDishes.findIndex((d) => d.id === targetDishId)
+      : -1;
+    if (existingIndex < 0) {
+      existingIndex = currentDishes.findIndex((d) => d.type === category);
     }
 
-    // dishes配列内の該当スロットも更新
-    const slotTypeMap: Record<string, DishCategory> = {
-      mainDish: 'main',
-      subDish: 'sub',
-      soupDish: 'soup',
-      dessertDish: 'dessert',
-    };
-    const targetType = slotTypeMap[slot] || 'main';
-
-    let currentDishes = currentDay.dishes ? [...currentDay.dishes] : [];
-    const existingIndex = currentDishes.findIndex((d) => d.type === targetType);
-
     const newEntry: DishEntry = {
-      id: 'dish_' + Math.random().toString(36).substring(2, 9),
+      id: existingIndex >= 0 ? currentDishes[existingIndex].id : 'dish_' + Date.now(),
       name: recipeName,
-      type: targetType,
-      ingredients: matchedRecipe?.ingredients,
+      type: recipeObj?.type || category,
+      ingredients: recipeObj?.ingredients,
       servings: currentDay.servings || globalServings,
     };
 
@@ -297,21 +350,15 @@ export const App: React.FC = () => {
       currentDishes.push(newEntry);
     }
 
-    const updatedDay: DayMenu = {
-      ...currentDay,
-      [slot]: recipeName,
-      dishes: currentDishes,
-      ingredients: updatedIngredients,
-    };
+    const updatedDay = ensureDayDishes(
+      {
+        ...currentDay,
+        dishes: currentDishes,
+      },
+      customRecipes
+    );
 
-    const newPlan = {
-      ...weekPlan,
-      [dayId]: updatedDay,
-    };
-
-    setWeekPlan(newPlan);
-    setShoppingItems((s) => generateShoppingListFromPlan(newPlan, s, globalServings));
-
+    handleUpdateDayAndSync(dayId, updatedDay);
     setSelectModalState((prev) => ({ ...prev, isOpen: false }));
     showToast(`🍳 「${recipeName}」に更新しました`);
   };
@@ -325,10 +372,9 @@ export const App: React.FC = () => {
     const monday = new Date(today);
     monday.setDate(today.getDate() + distanceToMon);
 
-    const dayIds: DayId[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
     const newRecords: Record<string, CalendarRecord> = { ...calendarRecords };
 
-    dayIds.forEach((dId, offset) => {
+    DAY_ORDER.forEach((dId, offset) => {
       const d = new Date(monday);
       d.setDate(monday.getDate() + offset);
       const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
@@ -337,14 +383,15 @@ export const App: React.FC = () => {
 
       const dayPlan = weekPlan[dId];
       if (dayPlan) {
-        const dishes = dayPlan.dishes && dayPlan.dishes.length > 0
-          ? [...dayPlan.dishes]
-          : [
-              dayPlan.mainDish && { id: 'd1', name: dayPlan.mainDish, type: 'main' as const },
-              dayPlan.subDish && { id: 'd2', name: dayPlan.subDish, type: 'sub' as const },
-              dayPlan.soupDish && { id: 'd3', name: dayPlan.soupDish, type: 'soup' as const },
-              dayPlan.dessertDish && { id: 'd4', name: dayPlan.dessertDish, type: 'dessert' as const },
-            ].filter(Boolean) as DishEntry[];
+        const dishes =
+          dayPlan.dishes !== undefined
+            ? [...dayPlan.dishes]
+            : ([
+                dayPlan.mainDish && { id: 'd1', name: dayPlan.mainDish, type: 'main' as const },
+                dayPlan.subDish && { id: 'd2', name: dayPlan.subDish, type: 'sub' as const },
+                dayPlan.soupDish && { id: 'd3', name: dayPlan.soupDish, type: 'soup' as const },
+                dayPlan.dessertDish && { id: 'd4', name: dayPlan.dessertDish, type: 'dessert' as const },
+              ].filter(Boolean) as DishEntry[]);
 
         newRecords[dateStr] = {
           date: dateStr,
@@ -362,7 +409,7 @@ export const App: React.FC = () => {
 
     try {
       confetti({ particleCount: 35, spread: 50, origin: { y: 0.4 } });
-    } catch (e) {
+    } catch {
       // ignore
     }
 
@@ -377,7 +424,7 @@ export const App: React.FC = () => {
     }));
   };
 
-  // メニュー画面から献立へ直接適用
+  // メニュー画面から献立へ直接適用（同じカテゴリの枠があれば置き換え、なければ追加）
   const handleApplyDishFromMenu = (
     dishName: string,
     category: DishCategory,
@@ -387,43 +434,33 @@ export const App: React.FC = () => {
     const day = weekPlan[targetDayId];
     if (!day) return;
 
-    const slotKey =
-      category === 'main'
-        ? 'mainDish'
-        : category === 'sub'
-        ? 'subDish'
-        : category === 'soup'
-        ? 'soupDish'
-        : 'dessertDish';
+    const currentDishes = day.dishes ? [...day.dishes] : [];
+    const existingIdx = currentDishes.findIndex((d) => d.type === category);
 
-    const newDishes = day.dishes ? [...day.dishes] : [];
-    newDishes.push({
-      id: 'dish_' + Math.random().toString(36).substring(2, 9),
+    const newEntry: DishEntry = {
+      id: existingIdx >= 0 ? currentDishes[existingIdx].id : 'dish_' + Date.now(),
       name: dishName,
       type: category,
       ingredients: recipeObj?.ingredients,
       servings: day.servings || globalServings,
-    });
-
-    const recipeIngredients = recipeObj?.ingredients || [];
-    const updatedDay: DayMenu = {
-      ...day,
-      [slotKey]: dishName,
-      dishes: newDishes,
-      ingredients: [
-        ...day.ingredients,
-        ...recipeIngredients.filter((i) => !day.ingredients.some((existing) => existing.name === i.name)),
-      ],
     };
 
-    const newPlan = {
-      ...weekPlan,
-      [targetDayId]: updatedDay,
-    };
+    if (existingIdx >= 0) {
+      currentDishes[existingIdx] = newEntry;
+    } else {
+      currentDishes.push(newEntry);
+    }
 
-    setWeekPlan(newPlan);
-    setShoppingItems((s) => generateShoppingListFromPlan(newPlan, s, globalServings));
-    showToast(`🍳 ${day.dayLabel}に「${dishName}」を追加しました！`);
+    const updatedDay = ensureDayDishes(
+      {
+        ...day,
+        dishes: currentDishes,
+      },
+      customRecipes
+    );
+
+    handleUpdateDayAndSync(targetDayId, updatedDay);
+    showToast(`🍳 ${day.dayLabel}の${recipeObj ? '献立' : 'メニュー'}に「${dishName}」をセットしました！`);
   };
 
   // カスタムレシピ登録
@@ -438,16 +475,36 @@ export const App: React.FC = () => {
     showToast('🗑️ マイメニューから削除しました');
   };
 
-  // カスタムレシピ編集
+  // カスタムレシピ編集（献立に同じ料理が入っていれば材料・分量も連動更新）
   const handleEditCustomRecipe = (updated: RecipeItem) => {
-    setCustomRecipes((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+    const nextCustom = customRecipes.map((r) => (r.id === updated.id ? updated : r));
+    setCustomRecipes(nextCustom);
+    setWeekPlan((prev) => {
+      const nextPlan = { ...prev };
+      DAY_ORDER.forEach((dId) => {
+        if (nextPlan[dId]) {
+          nextPlan[dId] = ensureDayDishes(nextPlan[dId], nextCustom);
+        }
+      });
+      setShoppingItems((prevShop) =>
+        generateShoppingListFromPlan(nextPlan, prevShop, globalServings)
+      );
+      return nextPlan;
+    });
     showToast('✏️ メニューを更新しました');
   };
 
   // お気に入りテンプレート適用
   const handleApplyTemplate = (template: SavedTemplate) => {
-    setWeekPlan(template.days);
-    setShoppingItems(generateShoppingListFromPlan(template.days, shoppingItems, globalServings));
+    const normalizedPlan: Record<DayId, DayMenu> = {} as Record<DayId, DayMenu>;
+    DAY_ORDER.forEach((dId) => {
+      normalizedPlan[dId] = ensureDayDishes(
+        { ...template.days[dId], servings: globalServings },
+        customRecipes
+      );
+    });
+    setWeekPlan(normalizedPlan);
+    setShoppingItems(generateShoppingListFromPlan(normalizedPlan, shoppingItems, globalServings));
     setCurrentTab('plan');
     showToast(`✨ 「${template.title}」を今週の献立に適用しました！`);
   };
@@ -455,7 +512,7 @@ export const App: React.FC = () => {
   // 現在の献立をお気に入りとして保存
   const handleSaveCurrentAsTemplate = (title: string, desc: string) => {
     const newTemplate: SavedTemplate = {
-      id: 'tmpl_' + Math.random().toString(36).substring(2, 9),
+      id: 'tmpl_' + Date.now(),
       title: title.trim() || 'マイスペシャルセット',
       description: desc.trim() || 'お気に入りの一週間献立',
       days: weekPlan,
@@ -484,8 +541,15 @@ export const App: React.FC = () => {
   // 献立リセット
   const handleResetWeek = () => {
     if (confirm('今週の献立を初期設定に戻しますか？')) {
-      setWeekPlan(DEFAULT_WEEK_DAYS);
-      setShoppingItems(generateShoppingListFromPlan(DEFAULT_WEEK_DAYS, [], globalServings));
+      const initialPlan: Record<DayId, DayMenu> = {} as Record<DayId, DayMenu>;
+      DAY_ORDER.forEach((dId) => {
+        initialPlan[dId] = ensureDayDishes(
+          { ...DEFAULT_WEEK_DAYS[dId], servings: globalServings },
+          customRecipes
+        );
+      });
+      setWeekPlan(initialPlan);
+      setShoppingItems(generateShoppingListFromPlan(initialPlan, [], globalServings));
       showToast('🔄 献立をリセットしました');
     }
   };
@@ -499,12 +563,12 @@ export const App: React.FC = () => {
 
   const handleAddShoppingItem = (
     name: string,
-    category: DishCategory | any,
+    category: ShoppingItem['category'],
     amount?: number,
     unit?: string
   ) => {
     const newItem: ShoppingItem = {
-      id: 'custom_shop_' + Math.random().toString(36).substring(2, 9),
+      id: 'custom_shop_' + Date.now(),
       name,
       category,
       amount,
@@ -531,21 +595,21 @@ export const App: React.FC = () => {
   };
 
   const handleChangeShoppingServings = (newServings: number) => {
-    setGlobalServings(newServings);
-    const synced = generateShoppingListFromPlan(weekPlan, shoppingItems, newServings);
-    setShoppingItems(synced);
+    handleChangeGlobalServings(newServings);
     showToast(`👨‍👩‍👧 人数を「${newServings}人分」に再計算しました！`);
   };
 
   // 工場出荷時リセット
   const handleFactoryReset = () => {
     localStorage.clear();
-    setWeekPlan(DEFAULT_WEEK_DAYS);
-    setShoppingItems(generateShoppingListFromPlan(DEFAULT_WEEK_DAYS, [], 2));
+    const initialPlan = loadWeekPlan();
+    setWeekPlan(initialPlan);
+    setShoppingItems(generateShoppingListFromPlan(initialPlan, [], 2));
     setCustomRecipes([]);
     setCalendarRecords({});
     setSavedTemplates(loadSavedTemplates());
     setSettings(loadAppSettings());
+    setGlobalServings(2);
     showToast('すべてのデータを初期化しました');
   };
 
@@ -558,6 +622,7 @@ export const App: React.FC = () => {
     setCalendarRecords(loadCalendarRecords());
     const newSettings = loadAppSettings();
     setSettings(newSettings);
+    setGlobalServings(newSettings.defaultServings || 2);
     applyVisualSettings(newSettings);
     showToast('📥 データを正常に復元しました！');
   };
@@ -581,7 +646,7 @@ export const App: React.FC = () => {
           {currentTab === 'plan' && (
             <WeekPlanView
               plan={weekPlan}
-              onUpdateDay={(dId, updated) => setWeekPlan((prev) => ({ ...prev, [dId]: updated }))}
+              onUpdateDay={handleUpdateDayAndSync}
               onOpenSlotSelect={handleOpenSlotSelect}
               onShuffleDay={handleShuffleDay}
               onOpenShopping={() => setIsShoppingOpen(true)}
@@ -589,7 +654,10 @@ export const App: React.FC = () => {
               allRecipes={allRecipes}
               showToast={showToast}
               globalServings={globalServings}
-              onChangeGlobalServings={setGlobalServings}
+              onChangeGlobalServings={handleChangeGlobalServings}
+              onOpenRecipeDetail={(recipe, servings) =>
+                setDetailModalState({ recipe, servings })
+              }
             />
           )}
 
@@ -602,6 +670,9 @@ export const App: React.FC = () => {
               onApplyWeekToCalendar={handleApplyWeekToCalendar}
               allRecipes={allRecipes}
               showToast={showToast}
+              onOpenRecipeDetail={(recipe, servings) =>
+                setDetailModalState({ recipe, servings })
+              }
             />
           )}
 
@@ -613,6 +684,7 @@ export const App: React.FC = () => {
               onDeleteCustomRecipe={handleDeleteCustomRecipe}
               onEditCustomRecipe={handleEditCustomRecipe}
               onApplyDishToDay={handleApplyDishFromMenu}
+              globalServings={globalServings}
             />
           )}
 
@@ -643,18 +715,28 @@ export const App: React.FC = () => {
           )}
         </main>
 
-        {/* 下部ドック（献立、カレンダー、メニュー、テンプレ、設定） */}
+        {/* 下部ドック（献立、カレンダー、メニュー、テンプレ、分析、設定） */}
         <Navbar currentTab={currentTab} onChangeTab={setCurrentTab} />
 
         {/* 料理選択モーダル */}
-        <RecipeSelectModal
-          isOpen={selectModalState.isOpen}
-          onClose={() => setSelectModalState((prev) => ({ ...prev, isOpen: false }))}
-          dayId={selectModalState.dayId}
-          targetSlot={selectModalState.slot}
-          currentValue={selectModalState.currentValue}
-          recipes={allRecipes}
-          onSelectRecipe={handleSelectRecipe}
+        {selectModalState.isOpen && (
+          <RecipeSelectModal
+            key={`${selectModalState.dayId}_${selectModalState.category}_${selectModalState.targetDishId || ''}`}
+            isOpen={selectModalState.isOpen}
+            onClose={() => setSelectModalState((prev) => ({ ...prev, isOpen: false }))}
+            dayId={selectModalState.dayId}
+            targetCategory={selectModalState.category}
+            currentValue={selectModalState.currentValue}
+            recipes={allRecipes}
+            onSelectRecipe={handleSelectRecipe}
+          />
+        )}
+
+        {/* 献立・カレンダーからのレシピ（作り方）確認モーダル */}
+        <RecipeDetailModal
+          recipe={detailModalState.recipe}
+          servings={detailModalState.servings}
+          onClose={() => setDetailModalState((prev) => ({ ...prev, recipe: null }))}
         />
 
         {/* 買い物リストモーダル */}

@@ -1,51 +1,39 @@
 import React, { useState, useMemo } from 'react';
 import { X, Search, Clock, Plus, Check } from 'lucide-react';
 import type { RecipeItem, DayId, DishCategory } from '../types';
+import { DISH_TYPE_INFO } from '../data/presetRecipes';
 
 interface RecipeSelectModalProps {
   isOpen: boolean;
   onClose: () => void;
   dayId: DayId;
-  targetSlot: 'mainDish' | 'subDish' | 'soupDish' | 'dessertDish';
+  targetCategory: DishCategory;
   currentValue: string;
   recipes: RecipeItem[];
   onSelectRecipe: (dishName: string, recipeObj?: RecipeItem) => void;
 }
 
+const DEFAULT_RECIPES: RecipeItem[] = [];
+
 export const RecipeSelectModal: React.FC<RecipeSelectModalProps> = ({
   isOpen,
   onClose,
-  targetSlot,
+  targetCategory,
   currentValue,
-  recipes = [],
+  recipes = DEFAULT_RECIPES,
   onSelectRecipe,
 }) => {
   const initialCategory: DishCategory | 'all' =
-    targetSlot === 'mainDish'
-      ? 'main'
-      : targetSlot === 'subDish'
-      ? 'sub'
-      : targetSlot === 'soupDish'
-      ? 'soup'
-      : 'dessert';
+    targetCategory === 'other' ? 'all' : targetCategory;
 
   const [activeType, setActiveType] = useState<DishCategory | 'all'>(initialCategory);
   const [searchQuery, setSearchQuery] = useState('');
   const [customInput, setCustomInput] = useState('');
 
-  const slotLabel =
-    targetSlot === 'mainDish'
-      ? '主菜（メイン）'
-      : targetSlot === 'subDish'
-      ? '副菜（サブ）'
-      : targetSlot === 'soupDish'
-      ? '汁物・スープ'
-      : 'デザート・スイーツ';
-
-  const safeRecipes = recipes || [];
+  const slotLabel = DISH_TYPE_INFO[targetCategory]?.label || 'メニュー';
 
   const filteredRecipes = useMemo(() => {
-    return safeRecipes.filter((r) => {
+    return recipes.filter((r) => {
       const matchType = activeType === 'all' || r.type === activeType;
       const matchQuery =
         searchQuery === '' ||
@@ -53,7 +41,7 @@ export const RecipeSelectModal: React.FC<RecipeSelectModalProps> = ({
         r.ingredients.some((i) => i.name.toLowerCase().includes(searchQuery.toLowerCase()));
       return matchType && matchQuery;
     });
-  }, [safeRecipes, activeType, searchQuery]);
+  }, [recipes, activeType, searchQuery]);
 
   if (!isOpen) return null;
 
@@ -71,10 +59,10 @@ export const RecipeSelectModal: React.FC<RecipeSelectModalProps> = ({
         <div className="modal-header">
           <div>
             <h3 className="modal-title">{slotLabel}を選ぶ</h3>
-            <p className="modal-subtitle">タップで即座に献立に反映されます</p>
+            <p className="modal-subtitle">タップで献立に反映されます</p>
           </div>
-          <button className="icon-btn modal-close-btn" onClick={onClose}>
-            <X size={20} />
+          <button className="icon-btn-plain" onClick={onClose} aria-label="閉じる">
+            <X size={22} />
           </button>
         </div>
 
@@ -83,7 +71,7 @@ export const RecipeSelectModal: React.FC<RecipeSelectModalProps> = ({
           <input
             type="text"
             className="text-input"
-            placeholder="自由に入力（例: 外食、冷蔵庫の残り物、手作りケーキ など）"
+            placeholder="自由に入力（例: 外食、冷蔵庫の残り物 など）"
             value={customInput}
             onChange={(e) => setCustomInput(e.target.value)}
             onKeyDown={(e) => {
@@ -97,17 +85,17 @@ export const RecipeSelectModal: React.FC<RecipeSelectModalProps> = ({
         </div>
 
         {/* 検索バー */}
-        <div className="search-bar-wrap">
-          <Search size={18} className="search-icon" />
+        <div className="search-bar-wrap" style={{ padding: '0 16px' }}>
+          <Search size={18} className="search-icon" style={{ left: 26 }} />
           <input
             type="text"
             className="search-input"
-            placeholder="料理名や食材で検索（例: 豚肉、プリン）"
+            placeholder="料理名や材料で検索"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           {searchQuery && (
-            <button className="icon-btn-xs" onClick={() => setSearchQuery('')}>
+            <button className="icon-btn-xs" style={{ right: 24 }} onClick={() => setSearchQuery('')}>
               <X size={16} />
             </button>
           )}
@@ -119,25 +107,25 @@ export const RecipeSelectModal: React.FC<RecipeSelectModalProps> = ({
             className={`filter-tab ${activeType === 'main' ? 'active' : ''}`}
             onClick={() => setActiveType('main')}
           >
-            🥩 主菜 ({recipes.filter((r) => r.type === 'main').length})
+            主菜 ({recipes.filter((r) => r.type === 'main').length})
           </button>
           <button
             className={`filter-tab ${activeType === 'sub' ? 'active' : ''}`}
             onClick={() => setActiveType('sub')}
           >
-            🥗 副菜 ({recipes.filter((r) => r.type === 'sub').length})
+            副菜 ({recipes.filter((r) => r.type === 'sub').length})
           </button>
           <button
             className={`filter-tab ${activeType === 'soup' ? 'active' : ''}`}
             onClick={() => setActiveType('soup')}
           >
-            🍲 汁物 ({recipes.filter((r) => r.type === 'soup').length})
+            汁物 ({recipes.filter((r) => r.type === 'soup').length})
           </button>
           <button
             className={`filter-tab ${activeType === 'dessert' ? 'active' : ''}`}
             onClick={() => setActiveType('dessert')}
           >
-            🍮 デザート ({recipes.filter((r) => r.type === 'dessert').length})
+            デザート ({recipes.filter((r) => r.type === 'dessert').length})
           </button>
           <button
             className={`filter-tab ${activeType === 'all' ? 'active' : ''}`}
@@ -150,9 +138,9 @@ export const RecipeSelectModal: React.FC<RecipeSelectModalProps> = ({
         {/* レシピ一覧 */}
         <div className="recipe-list-container">
           {filteredRecipes.length === 0 ? (
-            <div className="empty-state">
-              <p>該当するレシピが見つかりませんでした。</p>
-              <p className="empty-hint">上の自由入力欄から直接入力できます。</p>
+            <div className="empty-box">
+              <p>該当する料理が見つかりませんでした</p>
+              <p className="empty-sub">上の自由入力欄から直接入力できます</p>
             </div>
           ) : (
             filteredRecipes.map((recipe) => {
@@ -169,7 +157,11 @@ export const RecipeSelectModal: React.FC<RecipeSelectModalProps> = ({
                   <div className="recipe-select-info">
                     <div className="recipe-name-row">
                       <span className="recipe-name">{recipe.name}</span>
-                      {isSelected && <span className="selected-badge"><Check size={14} /> 選択中</span>}
+                      {isSelected && (
+                        <span className="selected-badge">
+                          <Check size={14} /> 選択中
+                        </span>
+                      )}
                     </div>
 
                     {recipe.tip && <p className="recipe-tip">{recipe.tip}</p>}
@@ -182,7 +174,7 @@ export const RecipeSelectModal: React.FC<RecipeSelectModalProps> = ({
                       )}
                       {recipe.ingredients.length > 0 && (
                         <span className="recipe-ingredients-preview">
-                          材料: {recipe.ingredients.map((i) => i.name).slice(0, 3).join(', ')}
+                          材料: {recipe.ingredients.map((i) => i.name).slice(0, 3).join('、')}
                           {recipe.ingredients.length > 3 ? ' 他' : ''}
                         </span>
                       )}

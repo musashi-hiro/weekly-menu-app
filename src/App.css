@@ -3042,3 +3042,910 @@ input:checked + .slider-round:before {
 }
 
 
+
+
+/* ==========================================================================
+   シンプル＆高視認性デザイン（上書きレイヤー）
+   - グラデーション・ぼかし・揺れるアニメーションを撤廃
+   - 小さすぎる文字を底上げ（最小 0.8rem）
+   - タップしやすいボタンサイズ（高さ40px以上）
+   ========================================================================== */
+
+body {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.text-primary {
+  color: var(--primary);
+}
+
+/* ---- ヘッダー・ドック：ぼかし無しのフラットな白 ---- */
+.app-header,
+.mobile-dock-container {
+  background-color: var(--bg-card);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+.app-container {
+  box-shadow: none;
+}
+
+.app-title {
+  font-size: 1.1rem;
+}
+
+.app-subtitle {
+  font-size: 0.8rem;
+}
+
+.logo-badge {
+  box-shadow: none;
+}
+
+.sub-action-btn-compact {
+  height: 36px;
+  font-size: 0.8rem;
+}
+
+.primary-action-btn {
+  height: 46px;
+  background: var(--primary);
+  box-shadow: none;
+  font-size: 0.95rem;
+}
+
+.sparkle-icon {
+  animation: none;
+}
+
+.dock-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.dock-item.active .dock-icon-box {
+  transform: none;
+}
+
+.app-main {
+  padding: 16px 14px 96px;
+}
+
+/* ---- 共通：カードはシャドウ無し・枠線のみ ---- */
+.day-card,
+.view-title-card,
+.recipe-manage-card,
+.kpi-card,
+.stats-section-card,
+.setting-card,
+.template-card,
+.favorites-header-card,
+.calendar-detail-panel {
+  box-shadow: none;
+  border-radius: var(--radius-md);
+}
+
+/* ---- 小さすぎる文字の底上げ ---- */
+.slot-type,
+.ing-label,
+.ing-tag,
+.day-theme,
+.shuffle-day-btn,
+.mode-btn,
+.memo-display,
+.memo-done-btn,
+.btn-sub-label,
+.modal-subtitle,
+.recipe-tip,
+.recipe-time,
+.recipe-ingredients-preview,
+.filter-tab,
+.setting-desc,
+.kpi-label,
+.radio-pill,
+.field-hint,
+.selected-badge,
+.shortcut-badge,
+.app-version-footer,
+.footer-sub,
+.btn-cancel-sm,
+.btn-add-sm,
+.btn-secondary-xs,
+.btn-danger-xs {
+  font-size: 0.8rem;
+}
+
+.slot-dish-name {
+  font-size: 0.95rem;
+}
+
+.btn-main-label,
+.text-input,
+.search-input,
+.select-input,
+.memo-textarea,
+.toast-notification {
+  font-size: 0.9rem;
+}
+
+.day-pill.selected {
+  transform: none;
+}
+
+.shuffle-day-btn:active {
+  transform: none;
+}
+
+.ing-tag {
+  color: var(--text-main);
+}
+
+.placeholder-text {
+  font-style: normal;
+  color: var(--text-light);
+}
+
+.memo-text {
+  font-style: normal;
+}
+
+/* ---- フォーム ---- */
+.text-input,
+.select-input {
+  min-height: 42px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+}
+
+.text-input.textarea {
+  resize: vertical;
+  line-height: 1.6;
+  font-family: inherit;
+}
+
+.form-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.radio-pill {
+  min-height: 40px;
+}
+
+.btn-cancel,
+.btn-submit {
+  min-height: 44px;
+  padding: 0 18px;
+  font-size: 0.9rem;
+  border-radius: var(--radius-sm);
+}
+
+.btn-submit:disabled {
+  opacity: 0.4;
+}
+
+/* ---- モーダル ---- */
+.modal-backdrop {
+  backdrop-filter: none;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.modal-content {
+  max-height: 90vh;
+}
+
+.modal-title {
+  font-size: 1.1rem;
+}
+
+.modal-title-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-btn-plain {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.icon-btn-plain:hover {
+  background: var(--bg-card-subtle);
+}
+
+.empty-sub,
+.muted-text {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.empty-box {
+  background: var(--bg-card);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+/* ---- 汎用ボタン ---- */
+.btn-solid,
+.btn-outline,
+.btn-primary-block {
+  min-height: 44px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.btn-solid,
+.btn-primary-block {
+  background: var(--primary);
+  color: #fff;
+}
+
+.btn-solid:active,
+.btn-primary-block:active {
+  background: var(--primary-dark);
+}
+
+.btn-solid.grow {
+  flex: 1;
+}
+
+.btn-outline {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+
+.btn-outline-sm {
+  min-height: 36px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.btn-solid-sm {
+  width: 42px;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.btn-solid-sm:disabled {
+  opacity: 0.35;
+}
+
+.btn-icon-outline {
+  width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.btn-icon-outline.danger {
+  color: #dc2626;
+}
+
+.btn-text-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #dc2626;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.btn-primary-block {
+  width: 100%;
+  min-height: 50px;
+  font-size: 1rem;
+}
+
+.btn-primary-block.done {
+  background: var(--accent);
+}
+
+/* ==========================================================================
+   メニュー＆レシピ画面
+   ========================================================================== */
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.page-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+
+.page-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.search-box {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.search-box input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 40px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  font-size: 0.95rem;
+}
+
+.search-box input:focus {
+  border-color: var(--border-focus);
+}
+
+.search-box-icon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-light);
+}
+
+.search-box-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.chip-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 12px;
+}
+
+.chip-tab {
+  min-height: 38px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.chip-tab.active {
+  background: var(--text-main);
+  border-color: var(--text-main);
+  color: var(--bg-card);
+}
+
+.chip-count {
+  font-size: 0.75rem;
+  font-weight: 700;
+  opacity: 0.7;
+}
+
+.recipe-rows {
+  list-style: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.recipe-rows li + li {
+  border-top: 1px solid var(--border-color);
+}
+
+.recipe-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px 12px 0;
+  text-align: left;
+  color: var(--text-main);
+}
+
+.recipe-row:active {
+  background: var(--bg-card-subtle);
+}
+
+.recipe-row-bar {
+  width: 4px;
+  align-self: stretch;
+  border-radius: 0 4px 4px 0;
+  flex-shrink: 0;
+}
+
+.recipe-row-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.recipe-row-name {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.recipe-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.meta-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.meta-recipe {
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+
+.meta-custom {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.recipe-row-arrow {
+  color: var(--text-light);
+  flex-shrink: 0;
+}
+
+/* ---- レシピ詳細 ---- */
+.recipe-detail-kicker {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.recipe-detail-body {
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.recipe-tip-box {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  background: var(--primary-light);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+
+.recipe-tip-box svg {
+  color: var(--primary);
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.detail-heading {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 4px 0 8px;
+  padding-left: 8px;
+  border-left: 4px solid var(--primary);
+}
+
+.ingredient-list {
+  list-style: none;
+  margin-bottom: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.ingredient-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 2px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.95rem;
+}
+
+.ingredient-cat {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  white-space: nowrap;
+}
+
+.step-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.step-list li {
+  display: flex;
+  gap: 10px;
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+.step-num {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-full);
+  background: var(--text-main);
+  color: var(--bg-card);
+  font-size: 0.85rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.recipe-detail-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--border-color);
+}
+
+/* ==========================================================================
+   買い物リスト
+   ========================================================================== */
+.shop-modal {
+  height: 90vh;
+}
+
+.shop-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.shop-servings {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shop-toolbar-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.stepper-round {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-main);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.stepper-round:disabled {
+  opacity: 0.35;
+}
+
+.shop-servings-val {
+  min-width: 52px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: 10px 16px 0;
+  padding: 4px;
+  background: var(--bg-card-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.segmented button {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.segmented button.active {
+  background: var(--bg-card);
+  color: var(--text-main);
+  box-shadow: var(--shadow-md);
+}
+
+.shop-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 16px 6px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.shop-status strong {
+  color: var(--primary);
+  font-size: 1.1rem;
+}
+
+.shop-status-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.check-label input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+
+.shop-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 16px 12px;
+}
+
+.shop-group {
+  margin-top: 12px;
+}
+
+.shop-group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 2px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-main);
+  border-bottom: 2px solid var(--text-main);
+}
+
+.shop-group-count {
+  margin-left: auto;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.shop-rows {
+  list-style: none;
+}
+
+.shop-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 4px 2px;
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+}
+
+.checkbox-box {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 2px solid var(--text-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+}
+
+.checkbox-box.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.shop-row-name {
+  flex: 1;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.shop-row-amount {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.shop-row.checked .shop-row-name,
+.shop-row.checked .shop-row-amount {
+  color: var(--text-light);
+  text-decoration: line-through;
+}
+
+.shop-row-delete {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-light);
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.shop-row-delete:hover {
+  color: #dc2626;
+  background: var(--bg-card-subtle);
+}
+
+.shop-add {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-card-subtle);
+}
+
+.shop-add select,
+.shop-add input {
+  min-height: 42px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  font-size: 0.9rem;
+  min-width: 0;
+}
+
+.shop-add-cat {
+  width: 96px;
+  flex-shrink: 0;
+}
+
+.shop-add-name {
+  flex: 1;
+}
+
+.shop-add-amount {
+  width: 64px;
+  flex-shrink: 0;
+}
+
+.shop-text-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  min-height: 0;
+}
+
+.shop-text-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.shop-textarea {
+  flex: 1;
+  width: 100%;
+  min-height: 240px;
+  resize: none;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  font-family: 'Noto Sans JP', monospace;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--text-main);
+}
+
+.shop-footer {
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--border-color);
+}
+
+
+/* 献立・カレンダー内の「作り方」ボタン */
+.slot-recipe-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 0 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.slot-recipe-btn:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+}

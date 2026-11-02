@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarDays, CalendarCheck, UtensilsCrossed, Settings, Heart } from 'lucide-react';
+import { CalendarDays, CalendarCheck, UtensilsCrossed, Settings, Heart, PieChart } from 'lucide-react';
 import type { NavTabType } from '../types';
 
 interface NavbarProps {
@@ -59,7 +59,19 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onChangeTab }) => {
           <span className="dock-label">テンプレ</span>
         </button>
 
-        {/* 5. 設定・保存 */}
+        {/* 5. データ分析 */}
+        <button
+          className={`dock-item ${currentTab === 'stats' ? 'active' : ''}`}
+          onClick={() => onChangeTab('stats')}
+          aria-label="献立データ分析"
+        >
+          <div className="dock-icon-box">
+            <PieChart size={20} className="dock-icon" />
+          </div>
+          <span className="dock-label">分析</span>
+        </button>
+
+        {/* 6. 設定・保存 */}
         <button
           className={`dock-item ${currentTab === 'settings' ? 'active' : ''}`}
           onClick={() => onChangeTab('settings')}
@@ -68,7 +80,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onChangeTab }) => {
           <div className="dock-icon-box">
             <Settings size={20} className="dock-icon" />
           </div>
-          <span className="dock-label">設定・保存</span>
+          <span className="dock-label">設定</span>
         </button>
       </div>
     </nav>

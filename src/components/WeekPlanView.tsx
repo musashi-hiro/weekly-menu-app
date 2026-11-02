@@ -10,6 +10,7 @@ import {
   Trash2,
   Users,
   Download,
+  BookOpen,
 } from 'lucide-react';
 import type { DayId, DayMenu, DishCategory, DishEntry, RecipeItem } from '../types';
 import { DISH_TYPE_INFO, formatIngredientWithAmount } from '../data/presetRecipes';
@@ -20,8 +21,9 @@ interface WeekPlanViewProps {
   onUpdateDay: (dayId: DayId, updated: DayMenu) => void;
   onOpenSlotSelect: (
     dayId: DayId,
-    slot: 'mainDish' | 'subDish' | 'soupDish' | 'dessertDish',
-    currentValue: string
+    category: DishCategory,
+    currentValue: string,
+    targetDishId?: string
   ) => void;
   onShuffleDay: (dayId: DayId) => void;
   onOpenShopping: () => void;
@@ -30,6 +32,7 @@ interface WeekPlanViewProps {
   showToast: (msg: string) => void;
   globalServings: number;
   onChangeGlobalServings: (servings: number) => void;
+  onOpenRecipeDetail: (recipe: RecipeItem, servings: number) => void;
 }
 
 const DAY_ORDER: DayId[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
@@ -45,6 +48,7 @@ export const WeekPlanView: React.FC<WeekPlanViewProps> = ({
   showToast,
   globalServings,
   onChangeGlobalServings,
+  onOpenRecipeDetail,
 }) => {
   const [viewMode, setViewMode] = useState<'all' | 'single'>('all');
   const [activeDayId, setActiveDayId] = useState<DayId>('mon');
@@ -56,12 +60,6 @@ export const WeekPlanView: React.FC<WeekPlanViewProps> = ({
   const handleUpdateAllServings = (newServings: number) => {
     if (newServings < 1 || newServings > 10) return;
     onChangeGlobalServings(newServings);
-    DAY_ORDER.forEach((dId) => {
-      const d = plan[dId];
-      if (d) {
-        onUpdateDay(dId, { ...d, servings: newServings });
-      }
-    });
     showToast(`👨‍👩‍👧 一週間の人数を「${newServings}人分」に設定しました！`);
   };
 
@@ -172,6 +170,7 @@ export const WeekPlanView: React.FC<WeekPlanViewProps> = ({
             }
             allRecipes={allRecipes}
             showToast={showToast}
+            onOpenRecipeDetail={onOpenRecipeDetail}
           />
         </div>
       )}
@@ -192,6 +191,7 @@ export const WeekPlanView: React.FC<WeekPlanViewProps> = ({
                   onToggleEditMemo={() => setEditingMemoDay(editingMemoDay === dId ? null : dId)}
                   allRecipes={allRecipes}
                   showToast={showToast}
+                  onOpenRecipeDetail={onOpenRecipeDetail}
                 />
               </div>
             );
@@ -206,8 +206,9 @@ interface DayCardProps {
   day: DayMenu;
   onOpenSlotSelect: (
     dayId: DayId,
-    slot: 'mainDish' | 'subDish' | 'soupDish' | 'dessertDish',
-    currentValue: string
+    category: DishCategory,
+    currentValue: string,
+    targetDishId?: string
   ) => void;
   onShuffleDay: (dayId: DayId) => void;
   onUpdateDay: (dayId: DayId, updated: DayMenu) => void;
@@ -215,6 +216,7 @@ interface DayCardProps {
   onToggleEditMemo: () => void;
   allRecipes: RecipeItem[];
   showToast: (msg: string) => void;
+  onOpenRecipeDetail: (recipe: RecipeItem, servings: number) => void;
 }
 
 const DayCard: React.FC<DayCardProps> = ({
@@ -226,6 +228,7 @@ const DayCard: React.FC<DayCardProps> = ({
   onToggleEditMemo,
   allRecipes,
   showToast,
+  onOpenRecipeDetail,
 }) => {
   const [isAddingDish, setIsAddingDish] = useState(false);
   const [newDishName, setNewDishName] = useState('');
@@ -234,15 +237,16 @@ const DayCard: React.FC<DayCardProps> = ({
   // 人数（デフォルト: 2）
   const currentServings = day.servings || 2;
 
-  // 料理リスト（dishesがあればそれを使用、なければ4スロットから合成）
-  const dishes: DishEntry[] = day.dishes && day.dishes.length > 0
-    ? day.dishes
-    : [
-        day.mainDish && { id: 'm', name: day.mainDish, type: 'main' as const },
-        day.subDish && { id: 's', name: day.subDish, type: 'sub' as const },
-        day.soupDish && { id: 'p', name: day.soupDish, type: 'soup' as const },
-        day.dessertDish && { id: 'd', name: day.dessertDish, type: 'dessert' as const },
-      ].filter(Boolean) as DishEntry[];
+  // 料理リスト（dishesが定義されていればそれを使用、未定義なら4スロットから合成）
+  const dishes: DishEntry[] =
+    day.dishes !== undefined
+      ? day.dishes
+      : ([
+          day.mainDish && { id: 'm', name: day.mainDish, type: 'main' as const },
+          day.subDish && { id: 's', name: day.subDish, type: 'sub' as const },
+          day.soupDish && { id: 'p', name: day.soupDish, type: 'soup' as const },
+          day.dessertDish && { id: 'd', name: day.dessertDish, type: 'dessert' as const },
+        ].filter(Boolean) as DishEntry[]);
 
   // 人数変更
   const handleChangeServings = (delta: number) => {
@@ -266,20 +270,9 @@ const DayCard: React.FC<DayCardProps> = ({
 
     const updatedDishes = [...dishes, newDish];
 
-    // 食材リストも追加分をマージ
-    let updatedIngredients = [...day.ingredients];
-    if (matched?.ingredients) {
-      matched.ingredients.forEach((ing) => {
-        if (!updatedIngredients.some((i) => i.name === ing.name)) {
-          updatedIngredients.push(ing);
-        }
-      });
-    }
-
     onUpdateDay(day.dayId, {
       ...day,
       dishes: updatedDishes,
-      ingredients: updatedIngredients,
     });
 
     setNewDishName('');
@@ -337,21 +330,13 @@ const DayCard: React.FC<DayCardProps> = ({
       <div className="dishes-slots">
         {dishes.map((dish) => {
           const info = DISH_TYPE_INFO[dish.type] || DISH_TYPE_INFO.main;
+          const matchedRecipe = allRecipes.find((r) => r.name === dish.name);
+
           return (
             <div key={dish.id} className="dish-slot-item">
               <div
                 className="slot-clickable"
-                onClick={() => {
-                  const slotKey =
-                    dish.type === 'main'
-                      ? 'mainDish'
-                      : dish.type === 'sub'
-                      ? 'subDish'
-                      : dish.type === 'soup'
-                      ? 'soupDish'
-                      : 'dessertDish';
-                  onOpenSlotSelect(day.dayId, slotKey, dish.name);
-                }}
+                onClick={() => onOpenSlotSelect(day.dayId, dish.type, dish.name, dish.id)}
               >
                 <div className="slot-icon-label" style={{ color: info.color }}>
                   <span>{info.icon}</span>
@@ -360,6 +345,18 @@ const DayCard: React.FC<DayCardProps> = ({
                 <div className="slot-dish-name">{dish.name}</div>
                 <Edit3 size={13} className="slot-edit-icon" />
               </div>
+
+              {/* レシピ（作り方）ボタン */}
+              {matchedRecipe && (
+                <button
+                  className="slot-recipe-btn"
+                  onClick={() => onOpenRecipeDetail(matchedRecipe, currentServings)}
+                  title="材料・作り方を見る"
+                >
+                  <BookOpen size={13} />
+                  <span>作り方</span>
+                </button>
+              )}
 
               {/* 削除ボタン */}
               <button

@@ -24,7 +24,8 @@ export const Header: React.FC<HeaderProps> = ({
             <h1 className="app-title">こんだてウィークリー</h1>
             <p className="app-subtitle">
               {currentTab === 'plan' && '一週間の夕食＆買い物'}
-              {currentTab === 'menu' && '料理メニュー登録・管理'}
+              {currentTab === 'calendar' && '献立の記録'}
+              {currentTab === 'menu' && 'メニューとレシピ'}
               {currentTab === 'favorites' && 'お気に入り献立テンプレート'}
               {currentTab === 'stats' && '登場頻度・割合データ分析'}
               {currentTab === 'settings' && '通知・画面表示・文字サイズ設定'}

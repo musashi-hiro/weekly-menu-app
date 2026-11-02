@@ -11,6 +11,7 @@ import {
   Copy,
   Clock,
   Utensils,
+  BookOpen,
 } from 'lucide-react';
 import type { CalendarRecord, DayId, DayMenu, DishCategory, DishEntry, RecipeItem } from '../types';
 import { DISH_TYPE_INFO } from '../data/presetRecipes';
@@ -22,6 +23,7 @@ interface CalendarViewProps {
   onApplyWeekToCalendar: () => void;
   allRecipes: RecipeItem[];
   showToast: (msg: string) => void;
+  onOpenRecipeDetail: (recipe: RecipeItem, servings: number) => void;
 }
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
@@ -31,10 +33,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onApplyWeekToCalendar,
   allRecipes,
   showToast,
+  onOpenRecipeDetail,
 }) => {
-  const today = new Date();
-  const [currentYear, setCurrentYear] = useState<number>(today.getFullYear());
-  const [currentMonth, setCurrentMonth] = useState<number>(today.getMonth()); // 0-indexed
+  const [today] = useState(() => new Date());
+  const [currentYear, setCurrentYear] = useState<number>(() => today.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState<number>(() => today.getMonth()); // 0-indexed
 
   // 選択中の日付 (YYYY-MM-DD)
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
@@ -127,7 +130,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     memo: '',
     rating: 0,
     cooked: false,
-    updatedAt: Date.now(),
+    updatedAt: 0,
   };
 
   // レコード更新ヘルパー
@@ -141,7 +144,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     if (!newDishName.trim()) return;
     const matched = allRecipes.find((r) => r.name === newDishName.trim());
     const newEntry: DishEntry = {
-      id: 'dish_' + Math.random().toString(36).substring(2, 9),
+      id: 'dish_' + Date.now() + '_' + activeRecord.dishes.length,
       name: newDishName.trim(),
       type: newDishType,
       ingredients: matched?.ingredients,
@@ -167,9 +170,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     showToast('🗑️ メニューを削除しました');
   };
 
-  // 「今週の献立」から選択日にコピー
+  // 「今週の献立」から選択日にコピー（ローカル日付として解析し、タイムゾーンによる曜日ズレを防ぐ）
   const handleCopyFromWeekPlan = () => {
-    const targetDateObj = new Date(selectedDate);
+    const [y, m, d] = selectedDate.split('-').map(Number);
+    const targetDateObj = new Date(y, m - 1, d);
     const dayIndex = targetDateObj.getDay(); // 0:日, 1:月...
     const map: DayId[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
     const matchedDayId = map[dayIndex];
@@ -424,6 +428,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             <div className="dishes-list-grid">
               {activeRecord.dishes.map((dish) => {
                 const info = DISH_TYPE_INFO[dish.type] || DISH_TYPE_INFO.main;
+                const matchedRecipe = allRecipes.find((r) => r.name === dish.name);
                 return (
                   <div key={dish.id} className="dish-card-item">
                     <div className="dish-badge" style={{ backgroundColor: info.color }}>
@@ -431,6 +436,16 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       <span>{info.label}</span>
                     </div>
                     <span className="dish-title">{dish.name}</span>
+                    {matchedRecipe && (
+                      <button
+                        className="slot-recipe-btn"
+                        onClick={() => onOpenRecipeDetail(matchedRecipe, activeRecord.servings || 2)}
+                        title="材料・作り方を見る"
+                      >
+                        <BookOpen size={13} />
+                        <span>作り方</span>
+                      </button>
+                    )}
                     <button
                       className="btn-delete-dish"
                       onClick={() => handleDeleteDish(dish.id)}

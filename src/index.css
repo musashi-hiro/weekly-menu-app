@@ -6,48 +6,48 @@
   --font-base: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-accent: 'Outfit', sans-serif;
 
-  /* ライトテーマ */
-  --bg-app: #f8fafc;
+  /* ライトテーマ（シンプル＆高コントラスト） */
+  --bg-app: #f5f5f4;
   --bg-card: #ffffff;
-  --bg-card-subtle: #f1f5f9;
+  --bg-card-subtle: #f5f5f4;
   --bg-input: #ffffff;
-  --bg-glass: rgba(255, 255, 255, 0.85);
+  --bg-glass: #ffffff;
 
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --text-light: #94a3b8;
+  --text-main: #1c1917;
+  --text-muted: #57534e;
+  --text-light: #78716c;
 
-  --border-color: #e2e8f0;
-  --border-focus: #ff6b35;
+  --border-color: #e7e5e4;
+  --border-focus: #d9480f;
 
-  /* ブランドカラー（温かい料理・食卓のアンバー＆コーラル） */
-  --primary: #ff6b35;
-  --primary-light: #fff2eb;
-  --primary-dark: #ea580c;
-  --primary-gradient: linear-gradient(135deg, #ff8a3d 0%, #ff521b 100%);
+  /* ブランドカラー（白地でも読みやすい濃いめのオレンジ） */
+  --primary: #d9480f;
+  --primary-light: #fff4ed;
+  --primary-dark: #b33a0b;
+  --primary-gradient: #d9480f;
 
-  /* アクセント（新鮮さ・健康のミントグリーン） */
-  --accent: #10b981;
-  --accent-light: #ecfdf5;
-  --accent-dark: #059669;
+  /* アクセント（新鮮さ・健康のグリーン） */
+  --accent: #15803d;
+  --accent-light: #f0fdf4;
+  --accent-dark: #166534;
 
-  /* ステータス・曜日カラー */
-  --color-mon: #3b82f6;
-  --color-tue: #ef4444;
-  --color-wed: #10b981;
-  --color-thu: #8b5cf6;
-  --color-fri: #f59e0b;
-  --color-sat: #06b6d4;
-  --color-sun: #ec4899;
+  /* ステータス・曜日カラー（白文字が読める濃さ） */
+  --color-mon: #2563eb;
+  --color-tue: #dc2626;
+  --color-wed: #059669;
+  --color-thu: #7c3aed;
+  --color-fri: #d97706;
+  --color-sat: #0891b2;
+  --color-sun: #db2777;
 
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-  --shadow-primary: 0 8px 20px -4px rgba(255, 107, 53, 0.35);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-primary: none;
 
   --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
   --radius-full: 9999px;
 
   --transition-fast: 0.15s ease;
@@ -55,26 +55,29 @@
 }
 
 [data-theme='dark'] {
-  --bg-app: #0f172a;
-  --bg-card: #1e293b;
-  --bg-card-subtle: #182234;
-  --bg-input: #0f172a;
-  --bg-glass: rgba(30, 41, 59, 0.85);
+  --bg-app: #121212;
+  --bg-card: #1e1e1e;
+  --bg-card-subtle: #262626;
+  --bg-input: #171717;
+  --bg-glass: #1e1e1e;
 
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --text-light: #64748b;
+  --text-main: #f5f5f4;
+  --text-muted: #c4c0bc;
+  --text-light: #a8a29e;
 
-  --border-color: #334155;
-  --border-focus: #ff8a3d;
+  --border-color: #3a3a3a;
+  --border-focus: #ff8a4c;
 
+  --primary: #ff8a4c;
   --primary-light: #3a2215;
-  --accent-light: #064e3b;
+  --primary-dark: #ffa877;
+  --primary-gradient: #ff8a4c;
+  --accent-light: #052e16;
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-  --shadow-primary: 0 8px 20px -4px rgba(255, 107, 53, 0.25);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-primary: none;
 }
 
 /* リセット＆基本スタイル */

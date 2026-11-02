@@ -28,6 +28,7 @@ export interface RecipeItem {
   ingredients: IngredientItem[];
   cookTimeMinutes?: number;
   tip?: string;
+  steps?: string[]; // 作り方（レシピ手順）
   isCustom?: boolean; // ユーザーが任意登録したメニューかどうか
   createdAt?: number;
 }

@@ -53,7 +53,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       } else {
         setNotificationTestStatus('⚠️ ブラウザで通知がブロックされています');
       }
-    } catch (e) {
+    } catch {
       setNotificationTestStatus('⚠️ 通知の送信に失敗しました');
     }
 

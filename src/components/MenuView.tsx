@@ -3,15 +3,13 @@ import {
   Plus,
   Search,
   Clock,
-  Trash2,
-  CalendarPlus,
-  Sparkles,
   X,
   ChefHat,
-  Pencil,
+  ChevronRight,
 } from 'lucide-react';
-import type { RecipeItem, DishCategory, DayId, IngredientCategory } from '../types';
-import { DISH_TYPE_INFO, guessCategory } from '../data/presetRecipes';
+import type { RecipeItem, DishCategory, DayId } from '../types';
+import { DISH_TYPE_INFO, GENRE_LABELS, parseIngredientText, formatIngredientWithAmount } from '../data/presetRecipes';
+import { RecipeDetailModal } from './RecipeDetailModal';
 
 interface MenuViewProps {
   recipes: RecipeItem[];
@@ -19,7 +17,52 @@ interface MenuViewProps {
   onDeleteCustomRecipe: (id: string) => void;
   onEditCustomRecipe: (recipe: RecipeItem) => void;
   onApplyDishToDay: (dishName: string, category: DishCategory, dayId: DayId, recipeObj: RecipeItem) => void;
+  globalServings?: number;
 }
+
+const DAY_LIST: { id: DayId; label: string }[] = [
+  { id: 'mon', label: '月曜' },
+  { id: 'tue', label: '火曜' },
+  { id: 'wed', label: '水曜' },
+  { id: 'thu', label: '木曜' },
+  { id: 'fri', label: '金曜' },
+  { id: 'sat', label: '土曜' },
+  { id: 'sun', label: '日曜' },
+];
+
+// 登録・編集フォームの入力値
+interface RecipeForm {
+  name: string;
+  type: DishCategory;
+  genre: RecipeItem['genre'];
+  time: number;
+  ingredients: string;
+  steps: string;
+  tip: string;
+}
+
+const EMPTY_FORM: RecipeForm = {
+  name: '',
+  type: 'main',
+  genre: 'japanese',
+  time: 15,
+  ingredients: '',
+  steps: '',
+  tip: '',
+};
+
+const parseIngredients = (text: string) =>
+  text
+    .split(/[,、，\n]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map(parseIngredientText);
+
+const parseSteps = (text: string) =>
+  text
+    .split('\n')
+    .map((s) => s.replace(/^\s*(\d+[.．)）]|[・-])\s*/, '').trim())
+    .filter(Boolean);
 
 export const MenuView: React.FC<MenuViewProps> = ({
   recipes,
@@ -27,318 +70,205 @@ export const MenuView: React.FC<MenuViewProps> = ({
   onDeleteCustomRecipe,
   onEditCustomRecipe,
   onApplyDishToDay,
+  globalServings = 2,
 }) => {
   const [activeTab, setActiveTab] = useState<DishCategory | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [detailRecipe, setDetailRecipe] = useState<RecipeItem | null>(null);
   const [applySelectRecipe, setApplySelectRecipe] = useState<RecipeItem | null>(null);
-  const [editingRecipe, setEditingRecipe] = useState<RecipeItem | null>(null);
 
-  // 新規登録フォーム用State
-  const [formName, setFormName] = useState('');
-  const [formType, setFormType] = useState<DishCategory>('main');
-  const [formGenre, setFormGenre] = useState<RecipeItem['genre']>('japanese');
-  const [formTime, setFormTime] = useState<number>(15);
-  const [formIngredients, setFormIngredients] = useState('');
-  const [formTip, setFormTip] = useState('');
+  // 登録・編集フォーム（editingId が null なら新規登録）
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<RecipeForm>(EMPTY_FORM);
 
-  // 編集フォーム用State
-  const [editFormName, setEditFormName] = useState('');
-  const [editFormType, setEditFormType] = useState<DishCategory>('main');
-  const [editFormGenre, setEditFormGenre] = useState<RecipeItem['genre']>('japanese');
-  const [editFormTime, setEditFormTime] = useState<number>(15);
-  const [editFormIngredients, setEditFormIngredients] = useState('');
-  const [editFormTip, setEditFormTip] = useState('');
+  const updateForm = <K extends keyof RecipeForm>(key: K, value: RecipeForm[K]) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
 
-  // フィルタリング
   const filteredRecipes = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     return recipes.filter((r) => {
       const matchType = activeTab === 'all' || r.type === activeTab;
       const matchSearch =
-        searchQuery === '' ||
-        r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.ingredients.some((i) => i.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        q === '' ||
+        r.name.toLowerCase().includes(q) ||
+        r.ingredients.some((i) => i.name.toLowerCase().includes(q));
       return matchType && matchSearch;
     });
   }, [recipes, activeTab, searchQuery]);
 
-  const handleCreateRecipe = (e: React.FormEvent) => {
+  const openCreate = () => {
+    setEditingId(null);
+    setForm({ ...EMPTY_FORM, name: searchQuery.trim() });
+    setIsFormOpen(true);
+  };
+
+  const openEdit = (recipe: RecipeItem) => {
+    setEditingId(recipe.id);
+    setForm({
+      name: recipe.name,
+      type: recipe.type,
+      genre: recipe.genre,
+      time: recipe.cookTimeMinutes || 15,
+      ingredients: recipe.ingredients.map((i) => formatIngredientWithAmount(i, 2)).join('\n'),
+      steps: (recipe.steps || []).join('\n'),
+      tip: recipe.tip || '',
+    });
+    setDetailRecipe(null);
+    setIsFormOpen(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formName.trim()) return;
+    if (!form.name.trim()) return;
 
-    const ingArray = formIngredients
-      .split(/[,、\n]/)
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .map((name) => ({
-        name,
-        category: guessCategory(name) as IngredientCategory,
-      }));
-
-    const newRecipe: RecipeItem = {
-      id: 'custom_' + Date.now(),
-      name: formName.trim(),
-      type: formType,
-      genre: formGenre,
-      cookTimeMinutes: formTime > 0 ? formTime : undefined,
-      ingredients: ingArray,
-      tip: formTip.trim(),
-      isCustom: true,
-      createdAt: Date.now(),
+    const base = {
+      name: form.name.trim(),
+      type: form.type,
+      genre: form.genre,
+      cookTimeMinutes: form.time > 0 ? form.time : undefined,
+      ingredients: parseIngredients(form.ingredients),
+      steps: parseSteps(form.steps),
+      tip: form.tip.trim(),
     };
 
-    onAddCustomRecipe(newRecipe);
-
-    // リセット
-    setFormName('');
-    setFormIngredients('');
-    setFormTip('');
-    setIsAddModalOpen(false);
+    if (editingId) {
+      const original = recipes.find((r) => r.id === editingId);
+      if (original) onEditCustomRecipe({ ...original, ...base });
+    } else {
+      onAddCustomRecipe({
+        id: 'custom_' + Date.now(),
+        ...base,
+        isCustom: true,
+        createdAt: Date.now(),
+      });
+    }
+    setIsFormOpen(false);
   };
 
-  // 編集モーダルを開く
-  const handleOpenEdit = (recipe: RecipeItem) => {
-    setEditingRecipe(recipe);
-    setEditFormName(recipe.name);
-    setEditFormType(recipe.type);
-    setEditFormGenre(recipe.genre);
-    setEditFormTime(recipe.cookTimeMinutes || 15);
-    setEditFormIngredients(recipe.ingredients.map((i) => i.name).join('、'));
-    setEditFormTip(recipe.tip || '');
-  };
-
-  // 編集を保存
-  const handleSaveEdit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingRecipe || !editFormName.trim()) return;
-
-    const ingArray = editFormIngredients
-      .split(/[,、\n]/)
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .map((name) => ({
-        name,
-        category: guessCategory(name) as IngredientCategory,
-      }));
-
-    const updatedRecipe: RecipeItem = {
-      ...editingRecipe,
-      name: editFormName.trim(),
-      type: editFormType,
-      genre: editFormGenre,
-      cookTimeMinutes: editFormTime > 0 ? editFormTime : undefined,
-      ingredients: ingArray,
-      tip: editFormTip.trim(),
-    };
-
-    onEditCustomRecipe(updatedRecipe);
-    setEditingRecipe(null);
-  };
-
-  const dayList: { id: DayId; label: string }[] = [
-    { id: 'mon', label: '月曜' },
-    { id: 'tue', label: '火曜' },
-    { id: 'wed', label: '水曜' },
-    { id: 'thu', label: '木曜' },
-    { id: 'fri', label: '金曜' },
-    { id: 'sat', label: '土曜' },
-    { id: 'sun', label: '日曜' },
+  const tabs: { key: DishCategory | 'all'; label: string }[] = [
+    { key: 'all', label: 'すべて' },
+    { key: 'main', label: '主菜' },
+    { key: 'sub', label: '副菜' },
+    { key: 'soup', label: '汁物' },
+    { key: 'dessert', label: 'デザート' },
   ];
 
   return (
     <div className="menu-view animate-fade-in">
-      {/* 画面ヘッダー */}
-      <div className="view-title-card">
-        <div className="title-row">
-          <div>
-            <h2 className="view-main-title">料理メニュー</h2>
-            <p className="view-sub-desc">主菜・副菜・汁物・デザートを自由に登録・管理できます</p>
-          </div>
-          <button className="btn-primary-action" onClick={() => setIsAddModalOpen(true)}>
-            <Plus size={18} />
-            <span>料理を登録</span>
-          </button>
+      {/* 見出し */}
+      <div className="page-head">
+        <div>
+          <h2 className="page-title">メニューとレシピ</h2>
+          <p className="page-desc">料理をタップすると材料と作り方が見られます</p>
         </div>
-
-        {/* 検索バー */}
-        <div className="search-bar-wrap">
-          <Search size={18} className="search-icon" />
-          <input
-            type="text"
-            className="search-input"
-            placeholder="料理名や材料で検索..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {searchQuery && (
-            <button className="icon-btn-xs" onClick={() => setSearchQuery('')}>
-              <X size={16} />
-            </button>
-          )}
-        </div>
-
-        {/* カテゴリ切り替えタブ */}
-        <div className="dock-category-tabs">
-          <button
-            className={`dock-cat-tab ${activeTab === 'all' ? 'active' : ''}`}
-            onClick={() => setActiveTab('all')}
-          >
-            <span>すべて</span>
-            <span className="count-pill">{recipes.length}</span>
-          </button>
-          <button
-            className={`dock-cat-tab ${activeTab === 'main' ? 'active' : ''}`}
-            onClick={() => setActiveTab('main')}
-          >
-            <span>🥩 主菜</span>
-            <span className="count-pill">{recipes.filter((r) => r.type === 'main').length}</span>
-          </button>
-          <button
-            className={`dock-cat-tab ${activeTab === 'sub' ? 'active' : ''}`}
-            onClick={() => setActiveTab('sub')}
-          >
-            <span>🥗 副菜</span>
-            <span className="count-pill">{recipes.filter((r) => r.type === 'sub').length}</span>
-          </button>
-          <button
-            className={`dock-cat-tab ${activeTab === 'soup' ? 'active' : ''}`}
-            onClick={() => setActiveTab('soup')}
-          >
-            <span>🍲 汁物</span>
-            <span className="count-pill">{recipes.filter((r) => r.type === 'soup').length}</span>
-          </button>
-          <button
-            className={`dock-cat-tab ${activeTab === 'dessert' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dessert')}
-          >
-            <span>🍮 デザート</span>
-            <span className="count-pill">{recipes.filter((r) => r.type === 'dessert').length}</span>
-          </button>
-        </div>
+        <button className="btn-solid" onClick={openCreate}>
+          <Plus size={18} />
+          <span>登録</span>
+        </button>
       </div>
 
-      {/* 料理一覧リスト */}
-      <div className="recipes-grid">
-        {filteredRecipes.length === 0 ? (
-          <div className="empty-box">
-            <ChefHat size={40} className="empty-icon" />
-            <p>料理が見つかりませんでした。</p>
-            <button className="btn-secondary-sm" onClick={() => setIsAddModalOpen(true)}>
-              この料理を新しく登録する
-            </button>
-          </div>
-        ) : (
-          filteredRecipes.map((recipe) => {
-            const catInfo = DISH_TYPE_INFO[recipe.type] || DISH_TYPE_INFO.main;
-
-            return (
-              <div key={recipe.id} className="recipe-manage-card">
-                <div className="recipe-card-top">
-                  <div className="recipe-badges">
-                    <span
-                      className="cat-badge"
-                      style={{ backgroundColor: `${catInfo.color}15`, color: catInfo.color }}
-                    >
-                      {catInfo.icon} {catInfo.label}
-                    </span>
-                    {recipe.isCustom && <span className="custom-badge">オリジナル</span>}
-                  </div>
-
-                  <div className="recipe-actions">
-                    <button
-                      className="btn-apply-to-day"
-                      onClick={() => setApplySelectRecipe(recipe)}
-                      title="今週の献立にセット"
-                    >
-                      <CalendarPlus size={15} />
-                      <span>献立へ</span>
-                    </button>
-
-                    {recipe.isCustom && (
-                      <>
-                        <button
-                          className="btn-edit-recipe"
-                          onClick={() => handleOpenEdit(recipe)}
-                          title="編集"
-                        >
-                          <Pencil size={15} />
-                        </button>
-                        <button
-                          className="btn-delete-recipe"
-                          onClick={() => {
-                            if (confirm(`「${recipe.name}」を削除しますか？`)) {
-                              onDeleteCustomRecipe(recipe.id);
-                            }
-                          }}
-                          title="削除"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                <h3 className="recipe-card-title">{recipe.name}</h3>
-
-                {recipe.tip && <p className="recipe-card-tip">{recipe.tip}</p>}
-
-                <div className="recipe-meta-bottom">
-                  {recipe.cookTimeMinutes && (
-                    <span className="recipe-cook-time">
-                      <Clock size={12} /> {recipe.cookTimeMinutes}分
-                    </span>
-                  )}
-                  {recipe.ingredients.length > 0 && (
-                    <div className="recipe-ing-tags">
-                      {recipe.ingredients.slice(0, 3).map((ing, i) => (
-                        <span key={i} className="mini-ing-tag">
-                          {ing.name}
-                        </span>
-                      ))}
-                      {recipe.ingredients.length > 3 && (
-                        <span className="mini-ing-more">+{recipe.ingredients.length - 3}</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })
+      {/* 検索 */}
+      <div className="search-box">
+        <Search size={18} className="search-box-icon" />
+        <input
+          type="text"
+          placeholder="料理名・材料で検索"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        {searchQuery && (
+          <button className="search-box-clear" onClick={() => setSearchQuery('')} aria-label="検索をクリア">
+            <X size={16} />
+          </button>
         )}
       </div>
 
-      {/* 曜日選択ポップアップ */}
+      {/* 分類タブ */}
+      <div className="chip-tabs">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            className={`chip-tab ${activeTab === t.key ? 'active' : ''}`}
+            onClick={() => setActiveTab(t.key)}
+          >
+            {t.label}
+            <span className="chip-count">
+              {t.key === 'all' ? recipes.length : recipes.filter((r) => r.type === t.key).length}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* 料理一覧 */}
+      {filteredRecipes.length === 0 ? (
+        <div className="empty-box">
+          <ChefHat size={36} className="empty-icon" />
+          <p>料理が見つかりませんでした</p>
+          <button className="btn-outline-sm" onClick={openCreate}>
+            新しく登録する
+          </button>
+        </div>
+      ) : (
+        <ul className="recipe-rows">
+          {filteredRecipes.map((recipe) => {
+            const info = DISH_TYPE_INFO[recipe.type] || DISH_TYPE_INFO.main;
+            return (
+              <li key={recipe.id}>
+                <button className="recipe-row" onClick={() => setDetailRecipe(recipe)}>
+                  <span className="recipe-row-bar" style={{ backgroundColor: info.color }} />
+                  <span className="recipe-row-body">
+                    <span className="recipe-row-name">{recipe.name}</span>
+                    <span className="recipe-row-meta">
+                      <span style={{ color: info.color, fontWeight: 700 }}>{info.label}</span>
+                      {recipe.cookTimeMinutes && (
+                        <span className="meta-time">
+                          <Clock size={13} />
+                          {recipe.cookTimeMinutes}分
+                        </span>
+                      )}
+                      {recipe.steps && recipe.steps.length > 0 && <span className="meta-recipe">レシピあり</span>}
+                      {recipe.isCustom && <span className="meta-custom">オリジナル</span>}
+                    </span>
+                  </span>
+                  <ChevronRight size={20} className="recipe-row-arrow" />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {/* レシピ詳細 */}
+      <RecipeDetailModal
+        recipe={detailRecipe}
+        servings={globalServings}
+        onClose={() => setDetailRecipe(null)}
+        onEdit={openEdit}
+        onDelete={onDeleteCustomRecipe}
+        onApplyToDay={(r) => setApplySelectRecipe(r)}
+      />
+
+      {/* 曜日選択 */}
       {applySelectRecipe && (
         <div className="modal-backdrop" onClick={() => setApplySelectRecipe(null)}>
-          <div
-            className="modal-content apply-day-modal animate-slide-up"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="modal-content animate-slide-up" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <h4 className="modal-title">どの曜日の献立に入れますか？</h4>
-                <p className="modal-subtitle">
-                  {applySelectRecipe.name}（{DISH_TYPE_INFO[applySelectRecipe.type].label}）
-                </p>
+                <h4 className="modal-title">どの曜日に入れますか？</h4>
+                <p className="modal-subtitle">{applySelectRecipe.name}</p>
               </div>
-              <button className="icon-btn-xs" onClick={() => setApplySelectRecipe(null)}>
-                <X size={18} />
+              <button className="icon-btn-plain" onClick={() => setApplySelectRecipe(null)} aria-label="閉じる">
+                <X size={22} />
               </button>
             </div>
-
             <div className="day-select-grid">
-              {dayList.map((d) => (
+              {DAY_LIST.map((d) => (
                 <button
                   key={d.id}
                   className="btn-day-slot"
                   onClick={() => {
-                    onApplyDishToDay(
-                      applySelectRecipe.name,
-                      applySelectRecipe.type,
-                      d.id,
-                      applySelectRecipe
-                    );
+                    onApplyDishToDay(applySelectRecipe.name, applySelectRecipe.type, d.id, applySelectRecipe);
                     setApplySelectRecipe(null);
                   }}
                 >
@@ -351,253 +281,117 @@ export const MenuView: React.FC<MenuViewProps> = ({
         </div>
       )}
 
-      {/* 料理の新規登録モーダル */}
-      {isAddModalOpen && (
-        <div className="modal-backdrop" onClick={() => setIsAddModalOpen(false)}>
-          <div
-            className="modal-content add-recipe-modal animate-slide-up"
-            onClick={(e) => e.stopPropagation()}
-          >
+      {/* 登録・編集フォーム */}
+      {isFormOpen && (
+        <div className="modal-backdrop" onClick={() => setIsFormOpen(false)}>
+          <div className="modal-content animate-slide-up" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <div className="modal-title-with-icon">
-                <Sparkles size={20} className="sparkle-highlight" />
-                <h3 className="modal-title">新しい料理を登録</h3>
-              </div>
-              <button className="icon-btn modal-close-btn" onClick={() => setIsAddModalOpen(false)}>
-                <X size={20} />
+              <h3 className="modal-title">{editingId ? '料理を編集' : '料理を登録'}</h3>
+              <button className="icon-btn-plain" onClick={() => setIsFormOpen(false)} aria-label="閉じる">
+                <X size={22} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateRecipe} className="add-recipe-form">
-              {/* 料理名 */}
+            <form onSubmit={handleSubmit} className="add-recipe-form">
               <div className="form-field">
-                <label className="form-label">料理名 <span className="req">*</span></label>
+                <label className="form-label">
+                  料理名 <span className="req">*</span>
+                </label>
                 <input
                   type="text"
                   className="text-input"
-                  placeholder="例: チーズタッカルビ、ガトーショコラ"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="例: チーズタッカルビ"
+                  value={form.name}
+                  onChange={(e) => updateForm('name', e.target.value)}
                   required
                   autoFocus
                 />
               </div>
 
-              {/* カテゴリ */}
               <div className="form-field">
-                <label className="form-label">カテゴリ <span className="req">*</span></label>
+                <label className="form-label">分類</label>
                 <div className="category-radio-row">
                   {(['main', 'sub', 'soup', 'dessert'] as DishCategory[]).map((cat) => (
                     <button
                       key={cat}
                       type="button"
-                      className={`radio-pill ${formType === cat ? 'selected' : ''}`}
-                      onClick={() => setFormType(cat)}
+                      className={`radio-pill ${form.type === cat ? 'selected' : ''}`}
+                      onClick={() => updateForm('type', cat)}
                     >
-                      {DISH_TYPE_INFO[cat].icon} {DISH_TYPE_INFO[cat].label}
+                      {DISH_TYPE_INFO[cat].label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* ジャンル＆調理時間 */}
               <div className="form-row-2">
                 <div className="form-field">
                   <label className="form-label">ジャンル</label>
                   <select
                     className="select-input"
-                    value={formGenre}
-                    onChange={(e) => setFormGenre(e.target.value as any)}
+                    value={form.genre}
+                    onChange={(e) => updateForm('genre', e.target.value as RecipeItem['genre'])}
                   >
-                    <option value="japanese">🇯🇵 和食</option>
-                    <option value="western">🍝 洋食</option>
-                    <option value="chinese">🥟 中華</option>
-                    <option value="quick">⚡ 時短・簡単</option>
-                    <option value="healthy">🥗 ヘルシー</option>
-                    <option value="sweet">🍮 スイーツ</option>
+                    {Object.entries(GENRE_LABELS).map(([key, label]) => (
+                      <option key={key} value={key}>
+                        {label}
+                      </option>
+                    ))}
                   </select>
                 </div>
-
                 <div className="form-field">
-                  <label className="form-label">調理目安（分）</label>
+                  <label className="form-label">調理時間（分）</label>
                   <input
                     type="number"
                     className="text-input"
                     min="1"
                     max="180"
-                    value={formTime}
-                    onChange={(e) => setFormTime(Number(e.target.value))}
+                    value={form.time}
+                    onChange={(e) => updateForm('time', Number(e.target.value))}
                   />
                 </div>
               </div>
 
-              {/* 必要な材料 */}
               <div className="form-field">
-                <label className="form-label">
-                  材料（カンマ「,」で区切って入力）
-                </label>
-                <input
-                  type="text"
-                  className="text-input"
-                  placeholder="例: 鶏もも肉, キャベツ, チーズ"
-                  value={formIngredients}
-                  onChange={(e) => setFormIngredients(e.target.value)}
+                <label className="form-label">材料（2人分基準・1行に1つ）</label>
+                <textarea
+                  className="text-input textarea"
+                  rows={4}
+                  placeholder={'鶏もも肉 250g\nキャベツ 0.2玉\nチーズ 80g'}
+                  value={form.ingredients}
+                  onChange={(e) => updateForm('ingredients', e.target.value)}
                 />
-                <span className="field-hint">
-                  ※ 入力した材料は「買い物リスト」に自動連動します
-                </span>
+                <span className="field-hint">「品名 200g」と書くと、買い物リストで人数に合わせて自動計算されます</span>
               </div>
 
-              {/* 調理のコツ・メモ */}
               <div className="form-field">
-                <label className="form-label">コツ・ひとことメモ</label>
-                <input
-                  type="text"
-                  className="text-input"
-                  placeholder="例: コチュジャン多めでピリ辛に！"
-                  value={formTip}
-                  onChange={(e) => setFormTip(e.target.value)}
+                <label className="form-label">作り方（1行に1手順）</label>
+                <textarea
+                  className="text-input textarea"
+                  rows={5}
+                  placeholder={'鶏肉を一口大に切る\nキャベツと一緒に炒める\nチーズをのせてフタをする'}
+                  value={form.steps}
+                  onChange={(e) => updateForm('steps', e.target.value)}
                 />
               </div>
 
-              <div className="form-bottom-actions">
-                <button
-                  type="button"
-                  className="btn-cancel"
-                  onClick={() => setIsAddModalOpen(false)}
-                >
-                  キャンセル
-                </button>
-                <button type="submit" className="btn-submit" disabled={!formName.trim()}>
-                  <Plus size={16} />
-                  <span>メニューに追加する</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* 料理の編集モーダル */}
-      {editingRecipe && (
-        <div className="modal-backdrop" onClick={() => setEditingRecipe(null)}>
-          <div
-            className="modal-content add-recipe-modal animate-slide-up"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="modal-header">
-              <div className="modal-title-with-icon">
-                <Pencil size={20} className="sparkle-highlight" />
-                <h3 className="modal-title">料理を編集</h3>
-              </div>
-              <button className="icon-btn modal-close-btn" onClick={() => setEditingRecipe(null)}>
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveEdit} className="add-recipe-form">
-              {/* 料理名 */}
               <div className="form-field">
-                <label className="form-label">料理名 <span className="req">*</span></label>
+                <label className="form-label">コツ・メモ</label>
                 <input
                   type="text"
                   className="text-input"
-                  placeholder="例: チーズタッカルビ、ガトーショコラ"
-                  value={editFormName}
-                  onChange={(e) => setEditFormName(e.target.value)}
-                  required
-                  autoFocus
-                />
-              </div>
-
-              {/* カテゴリ */}
-              <div className="form-field">
-                <label className="form-label">カテゴリ <span className="req">*</span></label>
-                <div className="category-radio-row">
-                  {(['main', 'sub', 'soup', 'dessert'] as DishCategory[]).map((cat) => (
-                    <button
-                      key={cat}
-                      type="button"
-                      className={`radio-pill ${editFormType === cat ? 'selected' : ''}`}
-                      onClick={() => setEditFormType(cat)}
-                    >
-                      {DISH_TYPE_INFO[cat].icon} {DISH_TYPE_INFO[cat].label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* ジャンル＆調理時間 */}
-              <div className="form-row-2">
-                <div className="form-field">
-                  <label className="form-label">ジャンル</label>
-                  <select
-                    className="select-input"
-                    value={editFormGenre}
-                    onChange={(e) => setEditFormGenre(e.target.value as any)}
-                  >
-                    <option value="japanese">🇯🇵 和食</option>
-                    <option value="western">🍝 洋食</option>
-                    <option value="chinese">🥟 中華</option>
-                    <option value="quick">⚡ 時短・簡単</option>
-                    <option value="healthy">🥗 ヘルシー</option>
-                    <option value="sweet">🍮 スイーツ</option>
-                  </select>
-                </div>
-
-                <div className="form-field">
-                  <label className="form-label">調理目安（分）</label>
-                  <input
-                    type="number"
-                    className="text-input"
-                    min="1"
-                    max="180"
-                    value={editFormTime}
-                    onChange={(e) => setEditFormTime(Number(e.target.value))}
-                  />
-                </div>
-              </div>
-
-              {/* 必要な材料 */}
-              <div className="form-field">
-                <label className="form-label">
-                  材料（カンマ「,」で区切って入力）
-                </label>
-                <input
-                  type="text"
-                  className="text-input"
-                  placeholder="例: 鶏もも肉, キャベツ, チーズ"
-                  value={editFormIngredients}
-                  onChange={(e) => setEditFormIngredients(e.target.value)}
-                />
-                <span className="field-hint">
-                  ※ 入力した材料は「買い物リスト」に自動連動します
-                </span>
-              </div>
-
-              {/* 調理のコツ・メモ */}
-              <div className="form-field">
-                <label className="form-label">コツ・ひとことメモ</label>
-                <input
-                  type="text"
-                  className="text-input"
-                  placeholder="例: コチュジャン多めでピリ辛に！"
-                  value={editFormTip}
-                  onChange={(e) => setEditFormTip(e.target.value)}
+                  placeholder="例: コチュジャン多めでピリ辛に"
+                  value={form.tip}
+                  onChange={(e) => updateForm('tip', e.target.value)}
                 />
               </div>
 
               <div className="form-bottom-actions">
-                <button
-                  type="button"
-                  className="btn-cancel"
-                  onClick={() => setEditingRecipe(null)}
-                >
+                <button type="button" className="btn-cancel" onClick={() => setIsFormOpen(false)}>
                   キャンセル
                 </button>
-                <button type="submit" className="btn-submit" disabled={!editFormName.trim()}>
-                  <Pencil size={16} />
-                  <span>変更を保存する</span>
+                <button type="submit" className="btn-submit" disabled={!form.name.trim()}>
+                  {editingId ? '保存する' : '登録する'}
                 </button>
               </div>
             </form>
